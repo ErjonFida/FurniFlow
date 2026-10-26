@@ -1,0 +1,12 @@
+server:
+  port: 8093
+
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: jdbc:postgresql://localhost:5442/orders
+    username: furniflow
+    password: furniflow
+  jpa:
+    open-in-view: false

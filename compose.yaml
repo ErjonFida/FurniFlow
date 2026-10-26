@@ -1,0 +1,29 @@
+# Local infrastructure. Run the services from your IDE or with ./mvnw spring-boot:run.
+services:
+  inventory-db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: furniflow
+      POSTGRES_PASSWORD: furniflow
+    ports: ["5441:5432"]
+    volumes: [inventory-data:/var/lib/postgresql]
+
+  order-db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: furniflow
+      POSTGRES_PASSWORD: furniflow
+    ports: ["5442:5432"]
+    volumes: [order-data:/var/lib/postgresql]
+
+  catalog-db:
+    image: mongo:8
+    ports: ["27017:27017"]
+    volumes: [catalog-data:/data/db]
+
+volumes:
+  inventory-data:
+  order-data:
+  catalog-data:

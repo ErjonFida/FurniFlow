@@ -1,0 +1,12 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: inventory-service
+  datasource:
+    url: jdbc:postgresql://localhost:5441/inventory
+    username: furniflow
+    password: furniflow
+  jpa:
+    open-in-view: false
