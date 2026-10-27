@@ -10,3 +10,8 @@ spring:
     password: furniflow
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: validate 
+  mvc:
+    problemdetails:
+      enabled: true 

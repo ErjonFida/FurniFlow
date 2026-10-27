@@ -43,7 +43,7 @@ cd frontend && npx ng test --watch=false
 
 ## Roadmap
 
-- [ ] 1. Inventory: stock reservations, the overselling experiment (naive vs `@Version` vs `FOR UPDATE` vs conditional `UPDATE`), load test results
+- [x] 1. Inventory: stock reservations, the overselling experiment (naive vs optimistic vs `FOR UPDATE` vs conditional `UPDATE`)
 - [ ] 2. Orders: idempotency keys, transactional outbox → RabbitMQ
 - [ ] 3. Security: Keycloak, Spring Security resource servers, Angular login + role guards
 - [ ] 4. Catalog in MongoDB, Angular storefront and admin pages
