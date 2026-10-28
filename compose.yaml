@@ -1,4 +1,4 @@
-# Local infrastructure. Run the services from your IDE or with ./mvnw spring-boot:run.
+# Local databases and Kafka. Run the services from your IDE or with ./mvnw spring-boot:run.
 services:
   inventory-db:
     image: postgres:18
@@ -22,6 +22,10 @@ services:
     image: mongo:8
     ports: ["27017:27017"]
     volumes: [catalog-data:/data/db]
+
+  kafka:
+    image: apache/kafka:4.2.2 # one broker in KRaft mode (no ZooKeeper), on localhost:9092
+    ports: ["9092:9092"]
 
 volumes:
   inventory-data:

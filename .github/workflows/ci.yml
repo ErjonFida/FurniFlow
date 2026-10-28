@@ -15,7 +15,7 @@ jobs:
           distribution: temurin
           java-version: 25
           cache: maven
-      # Testcontainers uses the runner's Docker for PostgreSQL and MongoDB
+      # Testcontainers uses the runner's Docker for PostgreSQL, MongoDB and Kafka
       - run: ./mvnw -B verify
 
   frontend:

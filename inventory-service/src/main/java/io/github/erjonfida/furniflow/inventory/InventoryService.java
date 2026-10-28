@@ -9,6 +9,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static io.github.erjonfida.furniflow.inventory.Reservation.Status.ACTIVE;
+import static io.github.erjonfida.furniflow.inventory.Reservation.Status.CONFIRMED;
+import static io.github.erjonfida.furniflow.inventory.Reservation.Status.EXPIRED;
+import static io.github.erjonfida.furniflow.inventory.Reservation.Status.RELEASED;
+
 @Service
 public class InventoryService {
 
@@ -45,12 +50,28 @@ public class InventoryService {
 
 	@Transactional
 	public void release(UUID id) {
-		Reservation reservation = reservations.findById(id)
-			.orElseThrow(() -> new NoSuchElementException("Unknown reservation " + id));
+		Reservation reservation = find(id);
 		// A conditional UPDATE, not reservation.setStatus(...): if a release and the expiry job race,
 		// only the one that flips ACTIVE gives the units back, so stock is never returned twice.
-		if (reservations.markReleased(id) == 1) {
+		if (reservations.transition(id, ACTIVE, RELEASED) == 1) {
 			stock.giveBack(reservation.getSku(), reservation.getQuantity());
+		}
+	}
+
+	/** The order was paid: the units are sold and can no longer expire or be released. Safe to repeat. */
+	@Transactional
+	public void confirm(UUID id) {
+		if (reservations.transition(id, ACTIVE, CONFIRMED) == 1) {
+			return;
+		}
+		// Paid after the hold ran out (say the event waited while Kafka was down), so the expiry job already put the
+		// units back on sale: take them again. Any other status means a repeated event, and there is nothing to do.
+		Reservation reservation = find(id);
+		if (reservations.transition(id, EXPIRED, CONFIRMED) == 1
+				&& stock.take(reservation.getSku(), reservation.getQuantity()) == 0) {
+			// Sold to someone else meanwhile. Throwing rolls the status change back.
+			// ponytail: after Kafka's retries this is only logged; add a dead-letter topic and a refund flow if it happens
+			throw new InsufficientStockException(reservation.getSku(), reservation.getQuantity());
 		}
 	}
 
@@ -58,6 +79,10 @@ public class InventoryService {
 	@Transactional
 	public void expireOverdue() {
 		reservations.expireOverdue();
+	}
+
+	private Reservation find(UUID id) {
+		return reservations.findById(id).orElseThrow(() -> new NoSuchElementException("Unknown reservation " + id));
 	}
 
 }
