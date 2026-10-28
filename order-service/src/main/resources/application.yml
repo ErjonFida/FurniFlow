@@ -10,3 +10,16 @@ spring:
     password: furniflow
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
+  http:
+    clients:
+      # A slow inventory-service must not hang order requests
+      connect-timeout: 2s
+      read-timeout: 5s
+
+furniflow:
+  inventory-url: http://localhost:8092

@@ -13,7 +13,7 @@ import jakarta.persistence.Id;
 @Entity
 public class Reservation {
 
-	public enum Status { ACTIVE, RELEASED, EXPIRED }
+	public enum Status { ACTIVE, CONFIRMED, RELEASED, EXPIRED }
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)

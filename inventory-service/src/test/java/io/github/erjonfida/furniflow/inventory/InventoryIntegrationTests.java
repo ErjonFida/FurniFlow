@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.inventory;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -15,10 +16,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -27,7 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-//Runs against a real PostgreSQL in Docker (Testcontainers), with the Flyway schema applied
+//Runs against a real PostgreSQL and Kafka in Docker (Testcontainers), with the Flyway schema applied
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -41,6 +44,9 @@ class InventoryIntegrationTests {
 
 	@Autowired
 	JdbcTemplate jdbc;
+
+	@Autowired
+	KafkaTemplate<String, String> kafka;
 
 	// The tests share one database, so each test (a new instance) gets its own SKU
 	final String sku = "SOFA-" + UUID.randomUUID();
@@ -109,8 +115,24 @@ class InventoryIntegrationTests {
 		inventory.release(id); // a late release after expiry must not give the units back a second time
 
 		assertThat(inventory.getStock(sku).getAvailable()).isEqualTo(5);
-		assertThat(jdbc.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, id))
-			.isEqualTo("EXPIRED");
+		assertThat(reservationStatus(id)).isEqualTo("EXPIRED");
+	}
+
+	@Test
+	void anOrderPaidEventConfirmsTheReservation() {
+		inventory.restock(sku, 5);
+		UUID id = inventory.reserve(sku, 2).getId();
+
+		kafka.send("order-paid", """
+				{"orderId": "%s", "reservationId": "%s"}""".formatted(UUID.randomUUID(), id)).join();
+
+		await().atMost(Duration.ofSeconds(30)).until(() -> reservationStatus(id), "CONFIRMED"::equals);
+		inventory.release(id); // sold units can't be released any more
+		assertThat(inventory.getStock(sku).getAvailable()).isEqualTo(3);
+	}
+
+	private String reservationStatus(UUID id) {
+		return jdbc.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, id);
 	}
 
 	private static MockHttpServletRequestBuilder reserve(String sku, int quantity) {

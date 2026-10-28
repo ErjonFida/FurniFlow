@@ -14,4 +14,9 @@ spring:
       ddl-auto: validate 
   mvc:
     problemdetails:
-      enabled: true 
+      enabled: true
+  kafka:
+    consumer:
+      group-id: inventory-service
+      # A new consumer group starts from the oldest event, so nothing sent before it first joined is skipped
+      auto-offset-reset: earliest
