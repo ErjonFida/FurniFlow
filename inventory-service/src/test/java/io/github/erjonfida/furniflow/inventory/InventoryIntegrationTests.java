@@ -3,6 +3,7 @@ package io.github.erjonfida.furniflow.inventory;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -17,13 +18,16 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -48,34 +52,51 @@ class InventoryIntegrationTests {
 	@Autowired
 	KafkaTemplate<String, String> kafka;
 
+	@Autowired
+	JwtAuthenticationConverter tokens;
+
 	// The tests share one database, so each test (a new instance) gets its own SKU
 	final String sku = "SOFA-" + UUID.randomUUID();
 
 	@Test
 	void reserveAndReleaseOverHttp() throws Exception {
-		mvc.perform(post("/api/inventory/stock/{sku}/restock", sku).contentType(APPLICATION_JSON).content("{\"quantity\": 5}"))
-			.andExpect(status().isNoContent());
+		mvc.perform(restock(sku, 5).with(as("admin"))).andExpect(status().isNoContent());
 
-		String created = mvc.perform(reserve(sku, 3))
+		String created = mvc.perform(reserve(sku, 3).with(as("reserve-stock")))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.status").value("ACTIVE"))
 			.andReturn().getResponse().getContentAsString();
 		mvc.perform(get("/api/inventory/stock/{sku}", sku)).andExpect(jsonPath("$.available").value(2));
 
 		String id = JsonPath.read(created, "$.id");
-		mvc.perform(delete("/api/inventory/reservations/{id}", id)).andExpect(status().isNoContent());
+		mvc.perform(delete("/api/inventory/reservations/{id}", id).with(as("reserve-stock")))
+			.andExpect(status().isNoContent());
 		mvc.perform(get("/api/inventory/stock/{sku}", sku)).andExpect(jsonPath("$.available").value(5));
+	}
+
+	@Test
+	void eachEndpointNeedsItsRole() throws Exception {
+		inventory.restock(sku, 5);
+
+		mvc.perform(get("/api/inventory/stock/{sku}", sku)).andExpect(status().isOk()); // anyone may look
+		mvc.perform(restock(sku, 1)).andExpect(status().isUnauthorized());
+		mvc.perform(restock(sku, 1).with(as("customer"))).andExpect(status().isForbidden());
+		// Not even an admin holds stock directly: only order-service does, while placing an order
+		mvc.perform(reserve(sku, 1).with(as("customer"))).andExpect(status().isForbidden());
+		mvc.perform(reserve(sku, 1).with(as("admin"))).andExpect(status().isForbidden());
+
+		assertThat(inventory.getStock(sku).getAvailable()).isEqualTo(5);
 	}
 
 	@Test
 	void errorsComeBackAsProblemDetails() throws Exception {
 		inventory.restock(sku, 1);
 
-		mvc.perform(reserve(sku, 2))
+		mvc.perform(reserve(sku, 2).with(as("reserve-stock")))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.detail").value(containsString("Not enough stock")));
-		mvc.perform(reserve("NO-SUCH-SKU", 1)).andExpect(status().isNotFound());
-		mvc.perform(reserve(sku, 0)).andExpect(status().isBadRequest());
+		mvc.perform(reserve("NO-SUCH-SKU", 1).with(as("reserve-stock"))).andExpect(status().isNotFound());
+		mvc.perform(reserve(sku, 0).with(as("reserve-stock"))).andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -133,6 +154,18 @@ class InventoryIntegrationTests {
 
 	private String reservationStatus(UUID id) {
 		return jdbc.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, id);
+	}
+
+	// Signed in with this Keycloak realm role. Its authorities come from the app's own converter (application.yml),
+	// so a broken role mapping fails these tests too. Only the token's signature isn't checked.
+	private RequestPostProcessor as(String role) {
+		return jwt().jwt(token -> token.claim("realm_access", Map.of("roles", List.of(role))))
+			.authorities(token -> tokens.convert(token).getAuthorities());
+	}
+
+	private static MockHttpServletRequestBuilder restock(String sku, int quantity) {
+		return post("/api/inventory/stock/{sku}/restock", sku).contentType(APPLICATION_JSON)
+			.content("{\"quantity\": %d}".formatted(quantity));
 	}
 
 	private static MockHttpServletRequestBuilder reserve(String sku, int quantity) {

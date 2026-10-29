@@ -20,6 +20,26 @@ spring:
       # A slow inventory-service must not hang order requests
       connect-timeout: 2s
       read-timeout: 5s
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/furniflow
+          # Same role mapping as inventory-service: realm role customer becomes ROLE_customer
+          authorities-claim-expressions: "['realm_access']['roles']"
+          authority-prefix: ROLE_
+      client:
+        # order-service's own identity for calling inventory-service (client credentials grant)
+        registration:
+          inventory:
+            provider: keycloak
+            client-id: order-service
+            client-secret: order-service-secret # local only, matches keycloak/furniflow-realm.json
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            # token-uri rather than issuer-uri: the service then starts even when Keycloak is down
+            token-uri: http://localhost:8180/realms/furniflow/protocol/openid-connect/token
 
 furniflow:
   inventory-url: http://localhost:8092

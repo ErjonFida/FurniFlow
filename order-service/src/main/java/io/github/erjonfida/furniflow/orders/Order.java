@@ -22,6 +22,8 @@ public class Order {
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
 
+	private String customerId;
+
 	private String idempotencyKey;
 
 	private String sku;
@@ -38,7 +40,9 @@ public class Order {
 	protected Order() {
 	}
 
-	Order(String idempotencyKey, String sku, int quantity, UUID reservationId, Instant reservedUntil) {
+	Order(String customerId, String idempotencyKey, String sku, int quantity, UUID reservationId,
+			Instant reservedUntil) {
+		this.customerId = customerId;
 		this.idempotencyKey = idempotencyKey;
 		this.sku = sku;
 		this.quantity = quantity;

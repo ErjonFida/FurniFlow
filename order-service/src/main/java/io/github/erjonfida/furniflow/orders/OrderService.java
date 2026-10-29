@@ -30,9 +30,11 @@ public class OrderService {
 		this.outbox = outbox;
 	}
 
+	// Another customer's order is reported as unknown, so nobody can find out which order IDs exist
 	@Transactional(readOnly = true)
-	public Order get(UUID id) {
-		return orders.findById(id).orElseThrow(() -> new NoSuchElementException("Unknown order " + id));
+	public Order get(UUID id, String customerId) {
+		return orders.findByIdAndCustomerId(id, customerId)
+			.orElseThrow(() -> new NoSuchElementException("Unknown order " + id));
 	}
 
 	/**
@@ -40,27 +42,27 @@ public class OrderService {
 	 * database connection is held while we wait for inventory. If this fails after inventory reserved the units,
 	 * that reservation simply expires.
 	 */
-	public Order place(String idempotencyKey, String sku, int quantity) {
-		Optional<Order> existing = orders.findByIdempotencyKey(idempotencyKey);
+	public Order place(String customerId, String idempotencyKey, String sku, int quantity) {
+		Optional<Order> existing = orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey);
 		if (existing.isPresent()) {
 			return existing.get();
 		}
 		InventoryClient.Reservation reservation = inventory.reserve(sku, quantity);
 		try {
-			return orders.saveAndFlush(
-					new Order(idempotencyKey, sku, quantity, reservation.id(), reservation.expiresAt()));
+			return orders.saveAndFlush(new Order(customerId, idempotencyKey, sku, quantity, reservation.id(),
+					reservation.expiresAt()));
 		}
 		catch (DataIntegrityViolationException sameKey) {
-			// A concurrent retry with the same key saved its order first (idempotency_key is UNIQUE).
+			// A concurrent retry with the same key saved its order first ((customer_id, idempotency_key) is UNIQUE).
 			// Give back the units we just reserved and answer with that order.
 			inventory.release(reservation.id());
-			return orders.findByIdempotencyKey(idempotencyKey).orElseThrow();
+			return orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey).orElseThrow();
 		}
 	}
 
 	@Transactional
-	public Order pay(UUID id) {
-		Order order = get(id);
+	public Order pay(UUID id, String customerId) {
+		Order order = get(id, customerId);
 		if (order.getStatus() == Order.Status.PAID) {
 			// Payment providers retry their callbacks. Two at the very same moment can both get past this check,
 			// which is fine: inventory ignores the repeated event.

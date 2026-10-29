@@ -1,19 +1,32 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import Keycloak from 'keycloak-js';
 import { App } from './app';
 
 describe('App', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
+  function render(keycloak: Partial<Keycloak>) {
+    TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([])],
-    }).compileComponents();
+      providers: [provideRouter([]), { provide: Keycloak, useValue: keycloak }],
+    });
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('offers to sign in when signed out', () => {
+    const page = render({ authenticated: false });
+    expect(page.querySelector('.navbar-brand')?.textContent).toContain('FurniFlow');
+    expect(page.textContent).toContain('Sign in');
   });
 
-  it('should render the navbar brand', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.navbar-brand')?.textContent).toContain('FurniFlow');
+  it('shows the user and, for admins, the stock page', () => {
+    const page = render({
+      authenticated: true,
+      tokenParsed: { preferred_username: 'ada' },
+      hasRealmRole: (role: string) => role === 'admin',
+    });
+    expect(page.textContent).toContain('ada');
+    expect(page.querySelector('a[href="/admin/stock"]')).not.toBeNull();
   });
 });
