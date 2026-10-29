@@ -19,7 +19,7 @@ services:
     volumes: [order-data:/var/lib/postgresql]
 
   catalog-db:
-    image: mongo:8
+    image: mongo:9.0
     ports: ["27017:27017"]
     volumes: [catalog-data:/data/db]
 
