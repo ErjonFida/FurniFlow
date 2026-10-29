@@ -35,23 +35,24 @@ class OrderServiceTests {
 
 	@Test
 	void losingASameKeyRaceGivesTheReservationBack() {
-		Order winner = new Order("key-1", "SOFA-1", 1, UUID.randomUUID(), Instant.now());
+		Order winner = new Order("alice", "key-1", "SOFA-1", 1, UUID.randomUUID(), Instant.now());
 		UUID ours = UUID.randomUUID();
-		when(orders.findByIdempotencyKey("key-1")).thenReturn(Optional.empty(), Optional.of(winner));
+		when(orders.findByCustomerIdAndIdempotencyKey("alice", "key-1"))
+			.thenReturn(Optional.empty(), Optional.of(winner));
 		when(inventory.reserve("SOFA-1", 1)).thenReturn(new InventoryClient.Reservation(ours, Instant.now()));
 		when(orders.saveAndFlush(any())).thenThrow(DataIntegrityViolationException.class);
 
-		assertThat(service.place("key-1", "SOFA-1", 1)).isSameAs(winner);
+		assertThat(service.place("alice", "key-1", "SOFA-1", 1)).isSameAs(winner);
 		verify(inventory).release(ours);
 	}
 
 	@Test
 	void payingTwiceSendsOneEvent() {
-		Order paid = new Order("key-1", "SOFA-1", 1, UUID.randomUUID(), Instant.now().plusSeconds(60));
+		Order paid = new Order("alice", "key-1", "SOFA-1", 1, UUID.randomUUID(), Instant.now().plusSeconds(60));
 		paid.markPaid();
-		when(orders.findById(any())).thenReturn(Optional.of(paid));
+		when(orders.findByIdAndCustomerId(any(), any())).thenReturn(Optional.of(paid));
 
-		service.pay(UUID.randomUUID());
+		service.pay(UUID.randomUUID(), "alice");
 
 		verifyNoInteractions(outbox);
 	}

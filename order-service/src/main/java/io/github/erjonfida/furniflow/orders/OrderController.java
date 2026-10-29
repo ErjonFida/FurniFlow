@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.orders;
 
+import java.security.Principal;
 import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -43,23 +44,24 @@ class OrderController {
 		this.orders = orders;
 	}
 
-	// The client makes up a key per order (a UUID) and sends the same one on every retry
+	// The client makes up a key per order (a UUID) and sends the same one on every retry.
+	// customer.getName() is the token's subject: the customer's Keycloak user ID.
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	OrderView place(@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 64) String idempotencyKey,
-			@Valid @RequestBody PlaceOrderRequest request) {
-		return OrderView.of(orders.place(idempotencyKey, request.sku(), request.quantity()));
+			@Valid @RequestBody PlaceOrderRequest request, Principal customer) {
+		return OrderView.of(orders.place(customer.getName(), idempotencyKey, request.sku(), request.quantity()));
 	}
 
 	@GetMapping("/{id}")
-	OrderView get(@PathVariable UUID id) {
-		return OrderView.of(orders.get(id));
+	OrderView get(@PathVariable UUID id, Principal customer) {
+		return OrderView.of(orders.get(id, customer.getName()));
 	}
 
-	// Stands in for a payment provider's callback
+	// Stands in for checking out with a payment provider
 	@PostMapping("/{id}/pay")
-	OrderView pay(@PathVariable UUID id) {
-		return OrderView.of(orders.pay(id));
+	OrderView pay(@PathVariable UUID id, Principal customer) {
+		return OrderView.of(orders.pay(id, customer.getName()));
 	}
 
 	@ExceptionHandler

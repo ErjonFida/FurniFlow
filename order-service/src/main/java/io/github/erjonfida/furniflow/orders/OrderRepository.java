@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 interface OrderRepository extends JpaRepository<Order, UUID> {
 
-	Optional<Order> findByIdempotencyKey(String idempotencyKey);
+	Optional<Order> findByIdAndCustomerId(UUID id, String customerId);
+
+	Optional<Order> findByCustomerIdAndIdempotencyKey(String customerId, String idempotencyKey);
 
 }

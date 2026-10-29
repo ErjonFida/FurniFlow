@@ -1,0 +1,63 @@
+{
+  "realm": "furniflow",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      { "name": "customer", "description": "Places and pays for their own orders" },
+      { "name": "admin", "description": "Manages stock" },
+      { "name": "reserve-stock", "description": "Holds stock for an order. Only order-service has it." }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "furniflow-web",
+      "name": "FurniFlow Angular app",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:4200/*"],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4200/*"
+      }
+    },
+    {
+      "clientId": "order-service",
+      "name": "order-service calling inventory-service",
+      "publicClient": false,
+      "secret": "order-service-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "firstName": "Alice",
+      "lastName": "Customer",
+      "email": "alice@furniflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "alice", "temporary": false }],
+      "realmRoles": ["customer"]
+    },
+    {
+      "username": "admin",
+      "firstName": "Ada",
+      "lastName": "Admin",
+      "email": "admin@furniflow.test",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "service-account-order-service",
+      "enabled": true,
+      "serviceAccountClientId": "order-service",
+      "realmRoles": ["reserve-stock"]
+    }
+  ]
+}

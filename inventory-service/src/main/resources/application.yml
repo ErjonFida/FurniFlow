@@ -20,3 +20,12 @@ spring:
       group-id: inventory-service
       # A new consumer group starts from the oldest event, so nothing sent before it first joined is skipped
       auto-offset-reset: earliest
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Tokens must be signed by this realm. Its public keys are fetched from here on the first request.
+          issuer-uri: http://localhost:8180/realms/furniflow
+          # Keycloak lists realm roles under realm_access.roles; admin becomes ROLE_admin, for hasRole("admin")
+          authorities-claim-expressions: "['realm_access']['roles']"
+          authority-prefix: ROLE_

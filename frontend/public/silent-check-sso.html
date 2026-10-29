@@ -1,0 +1,7 @@
+<!doctype html>
+<html>
+<body>
+  <!-- Keycloak redirects its hidden sign-in check here; hand the result back to the app -->
+  <script>parent.postMessage(location.href, location.origin);</script>
+</body>
+</html>
