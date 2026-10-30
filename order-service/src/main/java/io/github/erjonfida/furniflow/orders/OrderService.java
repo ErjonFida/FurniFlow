@@ -1,6 +1,7 @@
 package io.github.erjonfida.furniflow.orders;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,6 +36,11 @@ public class OrderService {
 	public Order get(UUID id, String customerId) {
 		return orders.findByIdAndCustomerId(id, customerId)
 			.orElseThrow(() -> new NoSuchElementException("Unknown order " + id));
+	}
+
+	@Transactional(readOnly = true)
+	public List<Order> list(String customerId) {
+		return orders.findByCustomerIdOrderByReservedUntilDesc(customerId);
 	}
 
 	/**

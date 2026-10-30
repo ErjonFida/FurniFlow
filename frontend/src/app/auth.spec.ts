@@ -38,7 +38,7 @@ describe('auth', () => {
   });
 
   function guard(role: string) {
-    const target = { url: '/admin/stock' } as RouterStateSnapshot;
+    const target = { url: '/admin' } as RouterStateSnapshot;
     return TestBed.runInInjectionContext(() => hasRole(role)({} as ActivatedRouteSnapshot, target));
   }
 
@@ -47,7 +47,7 @@ describe('auth', () => {
     setUp({ authenticated: false, login });
 
     expect(await guard('admin')).toBe(false);
-    expect(login).toHaveBeenCalledWith({ redirectUri: `${location.origin}/admin/stock` });
+    expect(login).toHaveBeenCalledWith({ redirectUri: `${location.origin}/admin` });
   });
 
   it('lets admins in and sends everyone else home', () => {

@@ -6,3 +6,14 @@ spring:
     name: catalog-service
   mongodb:
     uri: mongodb://localhost:27017/catalog
+  mvc:
+    problemdetails:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Same realm and role mapping as the other services
+          issuer-uri: http://localhost:8180/realms/furniflow
+          authorities-claim-expressions: "['realm_access']['roles']"
+          authority-prefix: ROLE_

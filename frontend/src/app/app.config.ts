@@ -1,6 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import Keycloak from 'keycloak-js';
 import { routes } from './app.routes';
 import { bearerToken } from './auth';
@@ -10,7 +10,7 @@ const keycloak = new Keycloak({ url: 'http://localhost:8180', realm: 'furniflow'
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()), // :sku in the URL becomes the page's sku input
     provideHttpClient(withInterceptors([bearerToken])),
     { provide: Keycloak, useValue: keycloak },
     // Before the first render: finish a sign-in redirect, or pick up an existing Keycloak session in a hidden
