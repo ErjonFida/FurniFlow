@@ -106,6 +106,9 @@ class OrderIntegrationTests {
 
 		// Bob happens to send the same idempotency key: he gets an order of his own, not Alice's
 		mvc.perform(place("bob", key, "SOFA-1", 1)).andExpect(jsonPath("$.id").value(not(alices)));
+		mvc.perform(get("/api/orders").with(as("bob", "customer")))
+			.andExpect(jsonPath("$.length()").value(1))
+			.andExpect(jsonPath("$[0].id").value(not(alices)));
 		mvc.perform(get("/api/orders/{id}", alices).with(as("bob", "customer"))).andExpect(status().isNotFound());
 		mvc.perform(post("/api/orders/{id}/pay", alices).with(as("bob", "customer")))
 			.andExpect(status().isNotFound());

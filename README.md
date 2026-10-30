@@ -47,5 +47,5 @@ cd frontend && npx ng test --watch=false
 - [x] 1. Inventory: stock reservations, the overselling experiment (naive vs optimistic vs `FOR UPDATE` vs conditional `UPDATE`)
 - [x] 2. Orders: idempotency keys, transactional outbox → Kafka, idempotent consumer
 - [x] 3. Security: Keycloak, Spring Security resource servers, Angular login + role guards
-- [ ] 4. Catalog in MongoDB, Angular storefront and admin pages
+- [x] 4. Catalog in MongoDB, Angular storefront and admin pages
 - [ ] 5. Dockerfiles, Kubernetes manifests, cloud deploy

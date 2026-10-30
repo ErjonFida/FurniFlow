@@ -2,6 +2,7 @@ package io.github.erjonfida.furniflow.orders;
 
 import java.security.Principal;
 import java.time.Instant;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -51,6 +52,12 @@ class OrderController {
 	OrderView place(@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 64) String idempotencyKey,
 			@Valid @RequestBody PlaceOrderRequest request, Principal customer) {
 		return OrderView.of(orders.place(customer.getName(), idempotencyKey, request.sku(), request.quantity()));
+	}
+
+	// ponytail: no paging, fine for a customer's own orders
+	@GetMapping
+	List<OrderView> list(Principal customer) {
+		return orders.list(customer.getName()).stream().map(OrderView::of).toList();
 	}
 
 	@GetMapping("/{id}")

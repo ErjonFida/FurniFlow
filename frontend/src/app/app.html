@@ -3,8 +3,11 @@
     <a class="navbar-brand" routerLink="/">FurniFlow</a>
     @if (keycloak.authenticated) {
       <div class="d-flex align-items-center gap-3">
+        @if (keycloak.hasRealmRole('customer')) {
+          <a class="nav-link" routerLink="/orders">My orders</a>
+        }
         @if (keycloak.hasRealmRole('admin')) {
-          <a class="nav-link" routerLink="/admin/stock">Stock</a>
+          <a class="nav-link" routerLink="/admin">Admin</a>
         }
         <span class="navbar-text">{{ keycloak.tokenParsed?.['preferred_username'] }}</span>
         <button class="btn btn-outline-secondary btn-sm" type="button" (click)="signOut()">Sign out</button>

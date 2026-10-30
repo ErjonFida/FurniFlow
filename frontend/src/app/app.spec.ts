@@ -20,13 +20,14 @@ describe('App', () => {
     expect(page.textContent).toContain('Sign in');
   });
 
-  it('shows the user and, for admins, the stock page', () => {
+  it('shows the user and, for admins, the admin page', () => {
     const page = render({
       authenticated: true,
       tokenParsed: { preferred_username: 'ada' },
       hasRealmRole: (role: string) => role === 'admin',
     });
     expect(page.textContent).toContain('ada');
-    expect(page.querySelector('a[href="/admin/stock"]')).not.toBeNull();
+    expect(page.querySelector('a[href="/admin"]')).not.toBeNull();
+    expect(page.querySelector('a[href="/orders"]')).toBeNull(); // admins don't shop
   });
 });

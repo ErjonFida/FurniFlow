@@ -12,7 +12,8 @@ class TestcontainersConfiguration {
 	@Bean
 	@ServiceConnection
 	MongoDBContainer mongoDbContainer() {
-		return new MongoDBContainer(DockerImageName.parse("mongo:8"));
+		// Same image as compose.yaml. MongoDB 8.3.13 refuses to start on Linux 6.19+ (the CI runners), 9.0 doesn't.
+		return new MongoDBContainer(DockerImageName.parse("mongo:9.0"));
 	}
 
 }
