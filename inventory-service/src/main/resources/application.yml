@@ -20,6 +20,10 @@ spring:
       group-id: inventory-service
       # A new consumer group starts from the oldest event, so nothing sent before it first joined is skipped
       auto-offset-reset: earliest
+      properties:
+        # order-service creates order-paid with 3 partitions. Started first, this consumer would create it with 1,
+        # and then not read the 2 added later until its next metadata refresh (5 minutes).
+        "[allow.auto.create.topics]": false
   security:
     oauth2:
       resourceserver:
