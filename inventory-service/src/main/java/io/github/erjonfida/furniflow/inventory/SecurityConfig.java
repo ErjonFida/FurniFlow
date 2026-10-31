@@ -16,6 +16,7 @@ class SecurityConfig {
 		return http
 			.authorizeHttpRequests(requests -> requests
 				.requestMatchers(HttpMethod.GET, "/api/inventory/stock/*").permitAll() // the shop shows availability
+				.requestMatchers("/actuator/health/**").permitAll() // Kubernetes probes; shows only UP or DOWN
 				.requestMatchers("/api/inventory/stock/*/restock").hasRole("admin")
 				// Only order-service may hold stock, so nobody can tie units up without placing an order
 				.requestMatchers("/api/inventory/reservations/**").hasRole("reserve-stock")

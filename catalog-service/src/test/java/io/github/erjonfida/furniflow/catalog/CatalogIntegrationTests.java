@@ -80,6 +80,7 @@ class CatalogIntegrationTests {
 		mvc.perform(save(sofa, "Oslo sofa", "1299.90", null).with(as("customer"))).andExpect(status().isForbidden());
 
 		mvc.perform(get("/api/catalog/products/{sku}", sofa)).andExpect(status().isNotFound());
+		mvc.perform(get("/actuator/health")).andExpect(status().isOk()); // Kubernetes probes need no token
 	}
 
 	@Test

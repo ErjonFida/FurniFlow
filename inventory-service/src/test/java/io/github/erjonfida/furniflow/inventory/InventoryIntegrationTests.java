@@ -79,6 +79,7 @@ class InventoryIntegrationTests {
 		inventory.restock(sku, 5);
 
 		mvc.perform(get("/api/inventory/stock/{sku}", sku)).andExpect(status().isOk()); // anyone may look
+		mvc.perform(get("/actuator/health")).andExpect(status().isOk()); // so may Kubernetes
 		mvc.perform(restock(sku, 1)).andExpect(status().isUnauthorized());
 		mvc.perform(restock(sku, 1).with(as("customer"))).andExpect(status().isForbidden());
 		// Not even an admin holds stock directly: only order-service does, while placing an order

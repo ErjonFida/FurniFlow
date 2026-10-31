@@ -16,6 +16,7 @@ class SecurityConfig {
 		return http
 			.authorizeHttpRequests(requests -> requests
 				.requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll() // anyone may browse the shop
+				.requestMatchers("/actuator/health/**").permitAll() // Kubernetes probes; shows only UP or DOWN
 				.requestMatchers("/api/catalog/**").hasRole("admin")
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(server -> server.jwt(Customizer.withDefaults()))

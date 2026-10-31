@@ -1,0 +1,6 @@
+# Everything on a local Kubernetes cluster: kubectl apply -k .
+resources: [k8s/infra.yaml, k8s/apps.yaml]
+configMapGenerator:
+  # The realm file compose.yaml imports. Its name gets a hash of the content, so editing the realm restarts Keycloak.
+  - name: keycloak-realm
+    files: [keycloak/furniflow-realm.json]
