@@ -114,6 +114,7 @@ class OrderIntegrationTests {
 			.andExpect(status().isNotFound());
 
 		mvc.perform(get("/api/orders/{id}", alices)).andExpect(status().isUnauthorized());
+		mvc.perform(get("/actuator/health")).andExpect(status().isOk()); // Kubernetes probes need no token
 		mvc.perform(get("/api/orders/{id}", alices).with(as("ada", "admin"))).andExpect(status().isForbidden());
 		mvc.perform(get("/api/orders/{id}", alices).with(as("alice", "customer"))).andExpect(status().isOk());
 	}

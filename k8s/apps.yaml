@@ -1,0 +1,143 @@
+# FurniFlow's own services. Settings that differ from application.yml come in as environment variables.
+#
+# Tokens name http://localhost:8180 as their issuer (KC_HOSTNAME in infra.yaml), which the services check as before.
+# Only the signing keys are fetched in-cluster, from keycloak:8180, since localhost inside a pod is the pod itself.
+#
+# Memory: limit = request, so a pod never gets killed for memory it was promised. No CPU limit: it would throttle
+# the JVM's startup, and the CPU request already decides the share under load.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: gateway}
+spec:
+  selector: {matchLabels: {app: gateway}}
+  template:
+    metadata: {labels: {app: gateway}}
+    spec:
+      securityContext: {runAsNonRoot: true}
+      containers:
+        - name: gateway
+          image: ghcr.io/erjonfida/furniflow/gateway:latest
+          ports: [{name: http, containerPort: 8090}]
+          env:
+            - {name: FURNIFLOW_CATALOGURL, value: "http://catalog-service:8091"}
+            - {name: FURNIFLOW_INVENTORYURL, value: "http://inventory-service:8092"}
+            - {name: FURNIFLOW_ORDERURL, value: "http://order-service:8093"}
+          resources: {requests: {cpu: 100m, memory: 768Mi}, limits: {memory: 768Mi}}
+          # Spring Boot serves these when it runs on Kubernetes. Liveness: restart me. Readiness: send me traffic.
+          startupProbe: {httpGet: {path: /actuator/health/liveness, port: http}, periodSeconds: 2, failureThreshold: 60}
+          livenessProbe: {httpGet: {path: /actuator/health/liveness, port: http}}
+          readinessProbe: {httpGet: {path: /actuator/health/readiness, port: http}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: gateway}
+spec: {selector: {app: gateway}, ports: [{port: 8090, targetPort: http}]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: catalog-service}
+spec:
+  selector: {matchLabels: {app: catalog-service}}
+  template:
+    metadata: {labels: {app: catalog-service}}
+    spec:
+      securityContext: {runAsNonRoot: true}
+      containers:
+        - name: catalog-service
+          image: ghcr.io/erjonfida/furniflow/catalog-service:latest
+          ports: [{name: http, containerPort: 8091}]
+          env:
+            - {name: SPRING_MONGODB_URI, value: "mongodb://catalog-db:27017/catalog"}
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI, value: "http://keycloak:8180/realms/furniflow/protocol/openid-connect/certs"}
+          resources: {requests: {cpu: 100m, memory: 768Mi}, limits: {memory: 768Mi}}
+          startupProbe: {httpGet: {path: /actuator/health/liveness, port: http}, periodSeconds: 2, failureThreshold: 60}
+          livenessProbe: {httpGet: {path: /actuator/health/liveness, port: http}}
+          readinessProbe: {httpGet: {path: /actuator/health/readiness, port: http}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: catalog-service}
+spec: {selector: {app: catalog-service}, ports: [{port: 8091, targetPort: http}]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: inventory-service}
+spec:
+  selector: {matchLabels: {app: inventory-service}}
+  template:
+    metadata: {labels: {app: inventory-service}}
+    spec:
+      securityContext: {runAsNonRoot: true}
+      containers:
+        - name: inventory-service
+          image: ghcr.io/erjonfida/furniflow/inventory-service:latest
+          ports: [{name: http, containerPort: 8092}]
+          env:
+            - {name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://inventory-db:5432/inventory"}
+            - {name: SPRING_DATASOURCE_PASSWORD, valueFrom: {secretKeyRef: {name: furniflow, key: db-password}}}
+            - {name: SPRING_KAFKA_BOOTSTRAPSERVERS, value: "kafka:9092"}
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI, value: "http://keycloak:8180/realms/furniflow/protocol/openid-connect/certs"}
+          resources: {requests: {cpu: 100m, memory: 768Mi}, limits: {memory: 768Mi}}
+          startupProbe: {httpGet: {path: /actuator/health/liveness, port: http}, periodSeconds: 2, failureThreshold: 60}
+          livenessProbe: {httpGet: {path: /actuator/health/liveness, port: http}}
+          readinessProbe: {httpGet: {path: /actuator/health/readiness, port: http}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: inventory-service}
+spec: {selector: {app: inventory-service}, ports: [{port: 8092, targetPort: http}]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: order-service}
+spec:
+  selector: {matchLabels: {app: order-service}}
+  template:
+    metadata: {labels: {app: order-service}}
+    spec:
+      securityContext: {runAsNonRoot: true}
+      containers:
+        - name: order-service
+          image: ghcr.io/erjonfida/furniflow/order-service:latest
+          ports: [{name: http, containerPort: 8093}]
+          env:
+            - {name: SPRING_DATASOURCE_URL, value: "jdbc:postgresql://order-db:5432/orders"}
+            - {name: SPRING_DATASOURCE_PASSWORD, valueFrom: {secretKeyRef: {name: furniflow, key: db-password}}}
+            - {name: SPRING_KAFKA_BOOTSTRAPSERVERS, value: "kafka:9092"}
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI, value: "http://keycloak:8180/realms/furniflow/protocol/openid-connect/certs"}
+            - {name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKENURI, value: "http://keycloak:8180/realms/furniflow/protocol/openid-connect/token"}
+            - {name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_INVENTORY_CLIENTSECRET, valueFrom: {secretKeyRef: {name: furniflow, key: order-service-client-secret}}}
+            - {name: FURNIFLOW_INVENTORYURL, value: "http://inventory-service:8092"}
+          resources: {requests: {cpu: 100m, memory: 768Mi}, limits: {memory: 768Mi}}
+          startupProbe: {httpGet: {path: /actuator/health/liveness, port: http}, periodSeconds: 2, failureThreshold: 60}
+          livenessProbe: {httpGet: {path: /actuator/health/liveness, port: http}}
+          readinessProbe: {httpGet: {path: /actuator/health/readiness, port: http}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: order-service}
+spec: {selector: {app: order-service}, ports: [{port: 8093, targetPort: http}]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: frontend}
+spec:
+  selector: {matchLabels: {app: frontend}}
+  template:
+    metadata: {labels: {app: frontend}}
+    spec:
+      securityContext: {runAsNonRoot: true}
+      containers:
+        - name: frontend
+          image: ghcr.io/erjonfida/furniflow/frontend:latest
+          ports: [{name: http, containerPort: 8080}]
+          resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 32Mi}}
+          readinessProbe: {httpGet: {path: /, port: http}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: frontend}
+spec:
+  type: LoadBalancer # Docker Desktop publishes it on http://localhost
+  selector: {app: frontend}
+  ports: [{port: 80, targetPort: http}]

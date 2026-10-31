@@ -10,14 +10,20 @@ spring:
         webmvc:
           routes:
             - id: catalog
-              uri: http://localhost:8091
+              uri: ${furniflow.catalog-url}
               predicates:
                 - Path=/api/catalog/**
             - id: inventory
-              uri: http://localhost:8092
+              uri: ${furniflow.inventory-url}
               predicates:
                 - Path=/api/inventory/**
             - id: orders
-              uri: http://localhost:8093
+              uri: ${furniflow.order-url}
               predicates:
                 - Path=/api/orders/**
+
+# Kubernetes overrides these with FURNIFLOW_CATALOGURL and so on
+furniflow:
+  catalog-url: http://localhost:8091
+  inventory-url: http://localhost:8092
+  order-url: http://localhost:8093

@@ -8,7 +8,7 @@ Angular + Bootstrap ──► gateway :8090 ──► catalog-service   :8091  (
                                      └──► order-service     :8093  (PostgreSQL) ───┘ order-paid (Kafka)
 ```
 
-**Stack:** Java 25, Spring Boot 4.1, Spring Cloud Gateway, Spring Data JPA + Flyway, Spring Data MongoDB, Spring for Apache Kafka, Spring Security (OAuth2 resource servers), Keycloak, Angular 22, Bootstrap 5, Testcontainers, GitHub Actions.
+**Stack:** Java 25, Spring Boot 4.1, Spring Cloud Gateway, Spring Data JPA + Flyway, Spring Data MongoDB, Spring for Apache Kafka, Spring Security (OAuth2 resource servers), Keycloak, Angular 22, Bootstrap 5, Testcontainers, Docker, Kubernetes, GitHub Actions.
 
 ## Run locally
 
@@ -21,6 +21,16 @@ cd frontend && npm install && npm start       # http://localhost:4200
 ```
 
 On Windows PowerShell use `.\mvnw.cmd` instead of `./mvnw`.
+
+## Run on Kubernetes
+
+Needs Docker Desktop with Kubernetes enabled. Stop compose first (`docker compose stop`), both use port 8180.
+
+```bash
+for s in gateway catalog-service inventory-service order-service; do docker build --build-arg SERVICE=$s -t ghcr.io/erjonfida/furniflow/$s .; done
+docker build -t ghcr.io/erjonfida/furniflow/frontend frontend
+kubectl apply -k .                            # then http://localhost
+```
 
 ## Test
 
@@ -40,7 +50,9 @@ cd frontend && npx ng test --watch=false
 | `frontend/` | Angular storefront and admin dashboard |
 | `keycloak/` | Realm imported by compose: roles, clients and test users |
 | `compose.yaml` | Local databases, Kafka and Keycloak |
-| `.github/workflows/ci.yml` | Backend and frontend CI |
+| `Dockerfile` | Image for any Spring service (`--build-arg SERVICE=...`) |
+| `k8s/`, `kustomization.yaml` | Kubernetes: stand-ins for the databases, Kafka and Keycloak, then the services |
+| `.github/workflows/ci.yml` | Backend and frontend CI; publishes the images from main |
 
 ## Roadmap
 
@@ -48,4 +60,5 @@ cd frontend && npx ng test --watch=false
 - [x] 2. Orders: idempotency keys, transactional outbox → Kafka, idempotent consumer
 - [x] 3. Security: Keycloak, Spring Security resource servers, Angular login + role guards
 - [x] 4. Catalog in MongoDB, Angular storefront and admin pages
-- [ ] 5. Dockerfiles, Kubernetes manifests, cloud deploy
+- [x] 5. Dockerfiles, Kubernetes manifests, images published by CI
+- [ ] 6. Cloud deploy
