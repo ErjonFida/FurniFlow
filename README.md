@@ -48,7 +48,7 @@ cd frontend && npx ng test --watch=false
 | `inventory-service/` | Stock and reservations in PostgreSQL (needs transactions) |
 | `order-service/` | Orders in PostgreSQL |
 | `frontend/` | Angular storefront and admin dashboard |
-| `keycloak/` | Realm imported by compose: roles, clients and test users |
+| `keycloak/` | Realm imported by compose: roles, clients and test users. Anyone may register as a customer. Admins add staff in Keycloak's console (Admin → Users and roles) and must sign in with an authenticator app; the first sign-in asks to set one up |
 | `compose.yaml` | Local databases, Kafka and Keycloak |
 | `Dockerfile` | Image for any Spring service (`--build-arg SERVICE=...`) |
 | `k8s/`, `kustomization.yaml` | Kubernetes: stand-ins for the databases, Kafka and Keycloak, then the services |

@@ -1,13 +1,80 @@
 {
   "realm": "furniflow",
   "enabled": true,
+  "registrationAllowed": true,
   "roles": {
     "realm": [
       { "name": "customer", "description": "Places and pays for their own orders" },
-      { "name": "admin", "description": "Manages stock" },
-      { "name": "reserve-stock", "description": "Holds stock for an order. Only order-service has it." }
+      {
+        "name": "admin",
+        "description": "Manages products, stock, and this realm's users and their roles",
+        "composite": true,
+        "composites": { "client": { "realm-management": ["view-users", "manage-users"] } }
+      },
+      { "name": "reserve-stock", "description": "Holds stock for an order. Only order-service has it." },
+      {
+        "name": "default-roles-furniflow",
+        "description": "Given to everyone who registers. Keycloak adds its own defaults to it.",
+        "composite": true,
+        "composites": { "realm": ["customer"] }
+      }
     ]
   },
+  "defaultRole": { "name": "default-roles-furniflow" },
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+  "browserFlow": "browser with admin 2fa",
+  "authenticationFlows": [
+    {
+      "alias": "browser with admin 2fa",
+      "description": "Keycloak's browser flow, except that anyone with the admin role must also enter a one-time code",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-cookie", "requirement": "ALTERNATIVE", "priority": 10, "authenticatorFlow": false },
+        { "flowAlias": "admin 2fa forms", "requirement": "ALTERNATIVE", "priority": 20, "authenticatorFlow": true }
+      ]
+    },
+    {
+      "alias": "admin 2fa forms",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "auth-username-password-form", "requirement": "REQUIRED", "priority": 10, "authenticatorFlow": false },
+        { "flowAlias": "admin 2fa admins", "requirement": "CONDITIONAL", "priority": 20, "authenticatorFlow": true },
+        { "flowAlias": "admin 2fa others", "requirement": "CONDITIONAL", "priority": 30, "authenticatorFlow": true }
+      ]
+    },
+    {
+      "alias": "admin 2fa admins",
+      "description": "Admins always. One without an authenticator app is made to set one up first.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "conditional-user-role", "authenticatorConfig": "is admin", "requirement": "REQUIRED", "priority": 10, "authenticatorFlow": false },
+        { "authenticator": "auth-otp-form", "requirement": "REQUIRED", "priority": 20, "authenticatorFlow": false }
+      ]
+    },
+    {
+      "alias": "admin 2fa others",
+      "description": "Everyone else only if they chose to set up an authenticator app, as in Keycloak's own flow",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        { "authenticator": "conditional-user-role", "authenticatorConfig": "is not admin", "requirement": "REQUIRED", "priority": 10, "authenticatorFlow": false },
+        { "authenticator": "conditional-user-configured", "requirement": "REQUIRED", "priority": 20, "authenticatorFlow": false },
+        { "authenticator": "auth-otp-form", "requirement": "REQUIRED", "priority": 30, "authenticatorFlow": false }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    { "alias": "is admin", "config": { "condUserRole": "admin", "negate": "false" } },
+    { "alias": "is not admin", "config": { "condUserRole": "admin", "negate": "true" } }
+  ],
   "clients": [
     {
       "clientId": "furniflow-web",

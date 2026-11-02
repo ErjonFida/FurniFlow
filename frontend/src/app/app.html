@@ -13,7 +13,11 @@
         <button class="btn btn-outline-secondary btn-sm" type="button" (click)="signOut()">Sign out</button>
       </div>
     } @else {
-      <button class="btn btn-primary btn-sm" type="button" (click)="keycloak.login()">Sign in</button>
+      <div class="d-flex gap-2">
+        <!-- Keycloak's own sign-up page. Everyone who registers becomes a customer (default role in the realm). -->
+        <button class="btn btn-outline-primary btn-sm" type="button" (click)="keycloak.register()">Register</button>
+        <button class="btn btn-primary btn-sm" type="button" (click)="keycloak.login()">Sign in</button>
+      </div>
     }
   </div>
 </nav>

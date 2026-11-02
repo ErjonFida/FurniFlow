@@ -1,6 +1,7 @@
 package io.github.erjonfida.furniflow.inventory;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -25,6 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 class InventoryController {
 
 	record StockView(String sku, int available) {
+
+		static StockView of(Stock s) {
+			return new StockView(s.getSku(), s.getAvailable());
+		}
+
 	}
 
 	record RestockRequest(@Positive int quantity) {
@@ -47,10 +53,15 @@ class InventoryController {
 		this.inventory = inventory;
 	}
 
+	// ponytail: every SKU in one response, like the catalog; add paging when it grows past a few hundred
+	@GetMapping("/stock")
+	List<StockView> allStock() {
+		return inventory.allStock().stream().map(StockView::of).toList();
+	}
+
 	@GetMapping("/stock/{sku}")
 	StockView stock(@PathVariable String sku) {
-		Stock stock = inventory.getStock(sku);
-		return new StockView(stock.getSku(), stock.getAvailable());
+		return StockView.of(inventory.getStock(sku));
 	}
 
 	@PostMapping("/stock/{sku}/restock")

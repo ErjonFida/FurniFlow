@@ -2,6 +2,7 @@ package io.github.erjonfida.furniflow.inventory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -32,6 +33,11 @@ public class InventoryService {
 	@Transactional(readOnly = true)
 	public Stock getStock(String sku) {
 		return stock.findById(sku).orElseThrow(() -> new NoSuchElementException("Unknown SKU " + sku));
+	}
+
+	@Transactional(readOnly = true)
+	public List<Stock> allStock() {
+		return stock.findAll();
 	}
 
 	@Transactional
