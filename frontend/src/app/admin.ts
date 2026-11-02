@@ -1,7 +1,8 @@
 import { CurrencyPipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import Keycloak from 'keycloak-js';
 import { switchMap } from 'rxjs';
 import { Product } from './products';
 
@@ -9,27 +10,37 @@ import { Product } from './products';
 export const parseAttributes = (text: string): Record<string, string> =>
   Object.fromEntries([...text.matchAll(/^(.+?):(.*)$/gm)].map(([, name, value]) => [name.trim(), value.trim()]));
 
-// Admins edit the catalog (catalog-service) and add units to a SKU (inventory-service)
+// Admins edit the catalog (catalog-service), add units to a SKU (inventory-service) and manage users (Keycloak)
 @Component({
   selector: 'app-admin',
   imports: [CurrencyPipe, FormsModule],
   template: `
-    <h1 class="h3 mb-3">Admin</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 mb-0">Admin</h1>
+      <a class="btn btn-outline-secondary btn-sm" [href]="usersUrl" target="_blank">Users and roles</a>
+    </div>
     <div class="row g-4">
       <section class="col-lg-6">
         <h2 class="h5">Products</h2>
         @if (products.hasValue()) {
           <table class="table table-sm align-middle">
+            <thead>
+              <tr><th>SKU</th><th>Name</th><th class="text-end">Price</th><th class="text-end">In stock</th><th></th></tr>
+            </thead>
             <tbody>
               @for (p of products.value(); track p.sku) {
                 <tr>
                   <td>{{ p.sku }}</td>
                   <td>{{ p.name }}</td>
                   <td class="text-end">{{ p.price | currency: 'EUR' }}</td>
-                  <td class="text-end"><button class="btn btn-link btn-sm" type="button" (click)="edit(p)">Edit</button></td>
+                  <td class="text-end">{{ available().get(p.sku) ?? 0 }}</td>
+                  <td class="text-end text-nowrap">
+                    <button class="btn btn-link btn-sm" type="button" (click)="edit(p)">Edit</button>
+                    <button class="btn btn-link btn-sm text-danger" type="button" (click)="remove(p)">Delete</button>
+                  </td>
                 </tr>
               } @empty {
-                <tr><td>No products yet.</td></tr>
+                <tr><td colspan="5">No products yet.</td></tr>
               }
             </tbody>
           </table>
@@ -91,12 +102,21 @@ export const parseAttributes = (text: string): Record<string, string> =>
 })
 export class Admin {
   private readonly http = inject(HttpClient);
+  private readonly keycloak = inject(Keycloak);
   protected readonly products = httpResource<Product[]>(() => '/api/catalog/products');
-  product = { sku: '', name: '', category: '', price: null as number | null, description: '' };
+  protected readonly stock = httpResource<{ sku: string; available: number }[]>(() => '/api/inventory/stock');
+  // Units on sale per SKU. A product that was never restocked has none.
+  protected readonly available = computed(
+    () => new Map(this.stock.hasValue() ? this.stock.value().map((s) => [s.sku, s.available] as const) : []),
+  );
+  // Keycloak's admin console for this realm. The admin role may manage its users and their roles there, nothing else.
+  protected readonly usersUrl = `${this.keycloak.authServerUrl}/admin/${this.keycloak.realm}/console/#/${this.keycloak.realm}/users`;
+  product ={ sku: '', name: '', category: '', price: null as number | null, description: '' };
   attributes = '';
   sku = '';
   quantity = 1;
   readonly message = signal('');
+  private readonly fail = (e: HttpErrorResponse) => this.message.set(e.error?.detail ?? e.message);
 
   edit(p: Product) {
     this.product = { sku: p.sku, name: p.name, category: p.category, price: p.price, description: p.description ?? '' };
@@ -113,8 +133,21 @@ export class Admin {
           this.products.reload();
           this.message.set(`${sku} saved`);
         },
-        error: (e: HttpErrorResponse) => this.message.set(e.error?.detail ?? e.message),
+        error: this.fail,
       });
+  }
+
+  remove(p: Product) {
+    if (!confirm(`Delete ${p.name}? Its stock and past orders stay.`)) {
+      return;
+    }
+    this.http.delete(`/api/catalog/products/${encodeURIComponent(p.sku)}`).subscribe({
+      next: () => {
+        this.products.reload();
+        this.message.set(`${p.sku} deleted`);
+      },
+      error: this.fail,
+    });
   }
 
   restock() {
@@ -123,8 +156,11 @@ export class Admin {
       .post(`${url}/restock`, { quantity: this.quantity })
       .pipe(switchMap(() => this.http.get<{ sku: string; available: number }>(url)))
       .subscribe({
-        next: (stock) => this.message.set(`${stock.sku}: ${stock.available} available`),
-        error: (e: HttpErrorResponse) => this.message.set(e.error?.detail ?? e.message),
+        next: (stock) => {
+          this.stock.reload();
+          this.message.set(`${stock.sku}: ${stock.available} available`);
+        },
+        error: this.fail,
       });
   }
 }

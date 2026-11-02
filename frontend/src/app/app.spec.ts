@@ -14,10 +14,11 @@ describe('App', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('offers to sign in when signed out', () => {
+  it('offers to sign in or register when signed out', () => {
     const page = render({ authenticated: false });
     expect(page.querySelector('.navbar-brand')?.textContent).toContain('FurniFlow');
     expect(page.textContent).toContain('Sign in');
+    expect(page.textContent).toContain('Register');
   });
 
   it('shows the user and, for admins, the admin page', () => {

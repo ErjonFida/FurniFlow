@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -81,6 +82,15 @@ class CatalogIntegrationTests {
 
 		mvc.perform(get("/api/catalog/products/{sku}", sofa)).andExpect(status().isNotFound());
 		mvc.perform(get("/actuator/health")).andExpect(status().isOk()); // Kubernetes probes need no token
+	}
+
+	@Test
+	void adminsDeleteProducts() throws Exception {
+		mvc.perform(save(sofa, "Oslo sofa", "1299.90", null).with(as("admin")));
+
+		mvc.perform(delete("/api/catalog/products/{sku}", sofa).with(as("customer"))).andExpect(status().isForbidden());
+		mvc.perform(delete("/api/catalog/products/{sku}", sofa).with(as("admin"))).andExpect(status().isNoContent());
+		mvc.perform(get("/api/catalog/products/{sku}", sofa)).andExpect(status().isNotFound());
 	}
 
 	@Test

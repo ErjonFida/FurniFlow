@@ -15,12 +15,14 @@ import jakarta.validation.constraints.Positive;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -54,6 +56,13 @@ class ProductController {
 	Product save(@PathVariable String sku, @Valid @RequestBody ProductRequest request) {
 		return products.save(new Product(sku, request.name(), request.category(), request.price(),
 				request.description(), Objects.requireNonNullElse(request.attributes(), Map.of())));
+	}
+
+	// Takes it out of the shop. Its stock and past orders only refer to the SKU, so they stay.
+	@DeleteMapping("/{sku}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	void delete(@PathVariable String sku) {
+		products.deleteById(sku);
 	}
 
 	@ExceptionHandler
