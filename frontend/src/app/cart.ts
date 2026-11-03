@@ -16,7 +16,11 @@ export class Cart {
   }
 
   add(sku: string, quantity: number) {
-    this.items.update((items) => ({ ...items, [sku]: (items[sku] ?? 0) + quantity }));
+    this.set(sku, (this.items()[sku] ?? 0) + quantity);
+  }
+
+  set(sku: string, quantity: number) {
+    this.items.update((items) => ({ ...items, [sku]: quantity }));
   }
 
   remove(sku: string) {
@@ -44,7 +48,11 @@ export class Cart {
             <tr>
               <td><a [routerLink]="['/products', line.sku]">{{ line.product?.name ?? line.sku }}</a></td>
               <td class="text-end">{{ line.product?.price | currency: 'EUR' }}</td>
-              <td class="text-end">{{ line.quantity }}</td>
+              <td class="text-end">
+                <input #quantity class="form-control form-control-sm d-inline-block" style="width: 5rem" type="number" min="1" required
+                  [attr.aria-label]="'Quantity of ' + (line.product?.name ?? line.sku)" [value]="line.quantity"
+                  (change)="setQuantity(line.sku, quantity)" />
+              </td>
               <td class="text-end"><button class="btn btn-link btn-sm" type="button" (click)="cart.remove(line.sku)">Remove</button></td>
             </tr>
           }
@@ -85,6 +93,16 @@ export class CartPage {
   // One key per visit to this page. If the answer gets lost and the customer clicks again, the same key goes
   // with it and order-service returns the order it already placed instead of reserving the units twice.
   private readonly idempotencyKey = crypto.randomUUID();
+
+  // On change, not on every keystroke: clearing the field to type a new number mustn't count. Anything but a whole
+  // number from 1 up (min and the default step decide) shows the cart's quantity again; Remove takes a line out.
+  protected setQuantity(sku: string, input: HTMLInputElement) {
+    if (input.validity.valid) {
+      this.cart.set(sku, input.valueAsNumber);
+    } else {
+      input.value = String(this.cart.items()[sku]);
+    }
+  }
 
   order() {
     const items = Object.entries(this.cart.items()).map(([sku, quantity]) => ({ sku, quantity }));
