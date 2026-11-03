@@ -24,6 +24,9 @@ public class Order {
 
 	private String customerId;
 
+	// The username when the order was placed, for people to read. Ownership checks use customerId.
+	private String customerName;
+
 	private String idempotencyKey;
 
 	private String sku;
@@ -40,9 +43,10 @@ public class Order {
 	protected Order() {
 	}
 
-	Order(String customerId, String idempotencyKey, String sku, int quantity, UUID reservationId,
+	Order(String customerId, String customerName, String idempotencyKey, String sku, int quantity, UUID reservationId,
 			Instant reservedUntil) {
 		this.customerId = customerId;
+		this.customerName = customerName;
 		this.idempotencyKey = idempotencyKey;
 		this.sku = sku;
 		this.quantity = quantity;
@@ -58,6 +62,11 @@ public class Order {
 
 	public UUID getId() {
 		return id;
+	}
+
+	// Orders placed before names were kept (V3) only have the Keycloak user ID
+	public String getCustomer() {
+		return customerName != null ? customerName : customerId;
 	}
 
 	public String getSku() {

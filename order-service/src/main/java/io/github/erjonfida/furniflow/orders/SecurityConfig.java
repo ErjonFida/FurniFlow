@@ -2,6 +2,7 @@ package io.github.erjonfida.furniflow.orders;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -15,6 +16,7 @@ class SecurityConfig {
 		return http
 			// Which orders a customer may see is checked in OrderService: only their own
 			.authorizeHttpRequests(requests -> requests
+				.requestMatchers(HttpMethod.GET, "/api/orders/all").hasRole("admin") // read only: admins don't place or pay
 				.requestMatchers("/api/orders/**").hasRole("customer")
 				.requestMatchers("/actuator/health/**").permitAll() // Kubernetes probes; shows only UP or DOWN
 				.anyRequest().authenticated())

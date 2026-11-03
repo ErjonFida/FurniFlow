@@ -43,20 +43,25 @@ public class OrderService {
 		return orders.findByCustomerIdOrderByReservedUntilDesc(customerId);
 	}
 
+	@Transactional(readOnly = true)
+	public List<Order> all() {
+		return orders.findAllByOrderByReservedUntilDesc();
+	}
+
 	/**
 	 * Places one order per idempotency key, however often the client retries. Not @Transactional on purpose: no
 	 * database connection is held while we wait for inventory. If this fails after inventory reserved the units,
 	 * that reservation simply expires.
 	 */
-	public Order place(String customerId, String idempotencyKey, String sku, int quantity) {
+	public Order place(String customerId, String customerName, String idempotencyKey, String sku, int quantity) {
 		Optional<Order> existing = orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey);
 		if (existing.isPresent()) {
 			return existing.get();
 		}
 		InventoryClient.Reservation reservation = inventory.reserve(sku, quantity);
 		try {
-			return orders.saveAndFlush(new Order(customerId, idempotencyKey, sku, quantity, reservation.id(),
-					reservation.expiresAt()));
+			return orders.saveAndFlush(new Order(customerId, customerName, idempotencyKey, sku, quantity,
+					reservation.id(), reservation.expiresAt()));
 		}
 		catch (DataIntegrityViolationException sameKey) {
 			// A concurrent retry with the same key saved its order first ((customer_id, idempotency_key) is UNIQUE).
