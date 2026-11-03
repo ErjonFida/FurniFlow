@@ -3,13 +3,17 @@ import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/htt
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-interface Order {
+export interface Order {
   id: string;
+  customer: string;
   sku: string;
   quantity: number;
   status: 'RESERVED' | 'PAID';
   reservedUntil: string;
 }
+
+// Unpaid and not yet expired: its units are still set aside
+export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date();
 
 // The signed-in customer's orders. order-service only ever returns their own.
 @Component({
@@ -53,10 +57,7 @@ export class Orders {
   private readonly http = inject(HttpClient);
   protected readonly orders = httpResource<Order[]>(() => '/api/orders');
   protected readonly message = signal('');
-
-  protected isHeld(order: Order) {
-    return new Date(order.reservedUntil) > new Date();
-  }
+  protected readonly isHeld = isHeld;
 
   pay(order: Order) {
     this.http.post(`/api/orders/${order.id}/pay`, null).subscribe({

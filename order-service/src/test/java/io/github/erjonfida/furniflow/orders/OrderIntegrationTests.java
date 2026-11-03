@@ -35,6 +35,7 @@ import org.springframework.web.ErrorResponseException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -120,6 +121,19 @@ class OrderIntegrationTests {
 	}
 
 	@Test
+	void adminsSeeEveryOrderAndWhoPlacedIt() throws Exception {
+		when(inventory.reserve(any(), anyInt())).thenAnswer(call -> hold(Duration.ofMinutes(15)));
+		String sku = "SOFA-" + key; // only this test's orders
+		mvc.perform(place("alice", key, sku, 1)).andExpect(status().isCreated());
+		mvc.perform(place("carol", key, sku, 2)).andExpect(status().isCreated());
+
+		mvc.perform(get("/api/orders/all").with(as("alice", "customer"))).andExpect(status().isForbidden());
+		// Usernames, not the IDs in the tokens' subjects
+		mvc.perform(get("/api/orders/all").with(as("ada", "admin")))
+			.andExpect(jsonPath("$[?(@.sku == '%s')].customer", sku).value(containsInAnyOrder("alice", "carol")));
+	}
+
+	@Test
 	void concurrentRetriesCreateOneOrder() throws Exception {
 		when(inventory.reserve(any(), anyInt())).thenAnswer(call -> hold(Duration.ofMinutes(15)));
 		Set<UUID> answers = ConcurrentHashMap.newKeySet();
@@ -127,7 +141,7 @@ class OrderIntegrationTests {
 		try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
 			List<Future<?>> retries = new ArrayList<>();
 			for (int i = 0; i < 20; i++) {
-				retries.add(pool.submit(() -> answers.add(orders.place("alice", key, "SOFA-1", 1).getId())));
+				retries.add(pool.submit(() -> answers.add(orders.place("alice", "alice", key, "SOFA-1", 1).getId())));
 			}
 			for (Future<?> retry : retries) {
 				retry.get(); // rethrows anything unexpected
@@ -187,8 +201,12 @@ class OrderIntegrationTests {
 
 	// Signed in as this user with this Keycloak realm role. Its authorities come from the app's own converter
 	// (application.yml), so a broken role mapping fails these tests too. Only the token's signature isn't checked.
+	// As in Keycloak, the subject is the user's ID and the username is a separate claim.
 	private RequestPostProcessor as(String user, String role) {
-		return jwt().jwt(token -> token.subject(user).claim("realm_access", Map.of("roles", List.of(role))))
+		return jwt()
+			.jwt(token -> token.subject("id-of-" + user)
+				.claim("preferred_username", user)
+				.claim("realm_access", Map.of("roles", List.of(role))))
 			.authorities(token -> tokens.convert(token).getAuthorities());
 	}
 

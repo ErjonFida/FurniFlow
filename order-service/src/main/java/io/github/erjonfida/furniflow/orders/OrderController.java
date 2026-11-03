@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Size;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,10 +32,11 @@ class OrderController {
 	record PlaceOrderRequest(@NotBlank String sku, @Positive int quantity) {
 	}
 
-	record OrderView(UUID id, String sku, int quantity, Order.Status status, Instant reservedUntil) {
+	record OrderView(UUID id, String customer, String sku, int quantity, Order.Status status, Instant reservedUntil) {
 
 		static OrderView of(Order o) {
-			return new OrderView(o.getId(), o.getSku(), o.getQuantity(), o.getStatus(), o.getReservedUntil());
+			return new OrderView(o.getId(), o.getCustomer(), o.getSku(), o.getQuantity(), o.getStatus(),
+					o.getReservedUntil());
 		}
 
 	}
@@ -50,14 +52,23 @@ class OrderController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	OrderView place(@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 64) String idempotencyKey,
-			@Valid @RequestBody PlaceOrderRequest request, Principal customer) {
-		return OrderView.of(orders.place(customer.getName(), idempotencyKey, request.sku(), request.quantity()));
+			@Valid @RequestBody PlaceOrderRequest request, JwtAuthenticationToken customer) {
+		String username = customer.getToken().getClaimAsString("preferred_username");
+		return OrderView.of(orders.place(customer.getName(), username, idempotencyKey, request.sku(),
+				request.quantity()));
 	}
 
 	// ponytail: no paging, fine for a customer's own orders
 	@GetMapping
 	List<OrderView> list(Principal customer) {
 		return orders.list(customer.getName()).stream().map(OrderView::of).toList();
+	}
+
+	// Every customer's orders, for admins (see SecurityConfig).
+	// ponytail: no paging; add it when the shop has more than a few hundred orders
+	@GetMapping("/all")
+	List<OrderView> all() {
+		return orders.all().stream().map(OrderView::of).toList();
 	}
 
 	@GetMapping("/{id}")

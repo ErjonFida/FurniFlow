@@ -15,4 +15,6 @@ interface OrderRepository extends JpaRepository<Order, UUID> {
 	// Every hold lasts equally long, so the latest hold is the newest order
 	List<Order> findByCustomerIdOrderByReservedUntilDesc(String customerId);
 
+	List<Order> findAllByOrderByReservedUntilDesc();
+
 }

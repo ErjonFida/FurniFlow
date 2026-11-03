@@ -1,19 +1,22 @@
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import Keycloak from 'keycloak-js';
 import { switchMap } from 'rxjs';
+import { isHeld, Order } from './orders';
 import { Product } from './products';
 
 // One "seats: 3" per line becomes { seats: '3' }
 export const parseAttributes = (text: string): Record<string, string> =>
   Object.fromEntries([...text.matchAll(/^(.+?):(.*)$/gm)].map(([, name, value]) => [name.trim(), value.trim()]));
 
-// Admins edit the catalog (catalog-service), add units to a SKU (inventory-service) and manage users (Keycloak)
+// Admins edit the catalog (catalog-service), add units to a SKU (inventory-service), see every order
+// (order-service) and manage users (Keycloak)
 @Component({
   selector: 'app-admin',
-  imports: [CurrencyPipe, FormsModule],
+  imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h1 class="h3 mb-0">Admin</h1>
@@ -98,6 +101,35 @@ export const parseAttributes = (text: string): Record<string, string> =>
     @if (message()) {
       <p class="mt-3" role="status">{{ message() }}</p>
     }
+
+    <section class="mt-4">
+      <h2 class="h5">Orders</h2>
+      @if (orders.hasValue()) {
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr><th>Customer</th><th>Product</th><th class="text-end">Quantity</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            @for (order of orders.value(); track order.id) {
+              <tr>
+                <td>{{ order.customer }}</td>
+                <td><a [routerLink]="['/products', order.sku]">{{ order.sku }}</a></td>
+                <td class="text-end">{{ order.quantity }}</td>
+                @if (order.status === 'PAID') {
+                  <td>Paid</td>
+                } @else if (isHeld(order)) {
+                  <td>Reserved until {{ order.reservedUntil | date: 'short' }}</td>
+                } @else {
+                  <td>Hold expired</td>
+                }
+              </tr>
+            } @empty {
+              <tr><td colspan="4">No orders yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
   `,
 })
 export class Admin {
@@ -105,6 +137,8 @@ export class Admin {
   private readonly keycloak = inject(Keycloak);
   protected readonly products = httpResource<Product[]>(() => '/api/catalog/products');
   protected readonly stock = httpResource<{ sku: string; available: number }[]>(() => '/api/inventory/stock');
+  protected readonly orders = httpResource<Order[]>(() => '/api/orders/all');
+  protected readonly isHeld = isHeld;
   // Units on sale per SKU. A product that was never restocked has none.
   protected readonly available = computed(
     () => new Map(this.stock.hasValue() ? this.stock.value().map((s) => [s.sku, s.available] as const) : []),
