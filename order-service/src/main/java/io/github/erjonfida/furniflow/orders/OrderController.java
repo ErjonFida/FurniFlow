@@ -82,13 +82,19 @@ class OrderController {
 		return OrderView.of(orders.pay(id, customer.getName()));
 	}
 
+	// Unpaid orders only. The order stays, marked CANCELLED, and its units go back on sale.
+	@PostMapping("/{id}/cancel")
+	OrderView cancel(@PathVariable UUID id, Principal customer) {
+		return OrderView.of(orders.cancel(id, customer.getName()));
+	}
+
 	@ExceptionHandler
 	ProblemDetail notFound(NoSuchElementException e) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
 	}
 
 	@ExceptionHandler
-	ProblemDetail notPayable(IllegalStateException e) {
+	ProblemDetail wrongStatus(IllegalStateException e) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
 	}
 

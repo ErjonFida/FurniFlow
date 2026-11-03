@@ -50,7 +50,7 @@ class OrderServiceTests {
 	void payingTwiceSendsOneEvent() {
 		Order paid = new Order("alice", "Alice", "key-1", "SOFA-1", 1, UUID.randomUUID(), Instant.now().plusSeconds(60));
 		paid.markPaid();
-		when(orders.findByIdAndCustomerId(any(), any())).thenReturn(Optional.of(paid));
+		when(orders.findForUpdateByIdAndCustomerId(any(), any())).thenReturn(Optional.of(paid));
 
 		service.pay(UUID.randomUUID(), "alice");
 

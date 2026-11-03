@@ -8,7 +8,7 @@ export interface Order {
   customer: string;
   sku: string;
   quantity: number;
-  status: 'RESERVED' | 'PAID';
+  status: 'RESERVED' | 'PAID' | 'CANCELLED';
   reservedUntil: string;
 }
 
@@ -34,9 +34,15 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
               @if (order.status === 'PAID') {
                 <td>Paid</td>
                 <td></td>
+              } @else if (order.status === 'CANCELLED') {
+                <td>Cancelled</td>
+                <td></td>
               } @else if (isHeld(order)) {
                 <td>Reserved until {{ order.reservedUntil | date: 'shortTime' }}</td>
-                <td><button class="btn btn-primary btn-sm" type="button" (click)="pay(order)">Pay</button></td>
+                <td class="text-nowrap">
+                  <button class="btn btn-primary btn-sm" type="button" (click)="send(order, 'pay')">Pay</button>
+                  <button class="btn btn-link btn-sm" type="button" (click)="send(order, 'cancel')">Cancel</button>
+                </td>
               } @else {
                 <td>Hold expired</td>
                 <td></td>
@@ -59,8 +65,8 @@ export class Orders {
   protected readonly message = signal('');
   protected readonly isHeld = isHeld;
 
-  pay(order: Order) {
-    this.http.post(`/api/orders/${order.id}/pay`, null).subscribe({
+  send(order: Order, action: 'pay' | 'cancel') {
+    this.http.post(`/api/orders/${order.id}/${action}`, null).subscribe({
       next: () => this.orders.reload(),
       error: (e: HttpErrorResponse) => this.message.set(e.error?.detail ?? e.message),
     });

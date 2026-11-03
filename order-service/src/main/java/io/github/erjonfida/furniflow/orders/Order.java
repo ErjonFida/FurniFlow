@@ -16,7 +16,7 @@ import jakarta.persistence.Table;
 @Table(name = "orders")
 public class Order {
 
-	public enum Status { RESERVED, PAID }
+	public enum Status { RESERVED, PAID, CANCELLED }
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -58,6 +58,10 @@ public class Order {
 
 	void markPaid() {
 		this.status = Status.PAID;
+	}
+
+	void markCancelled() {
+		this.status = Status.CANCELLED;
 	}
 
 	public UUID getId() {

@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class OrderService {
@@ -25,10 +26,13 @@ public class OrderService {
 
 	private final Outbox outbox;
 
-	OrderService(OrderRepository orders, InventoryClient inventory, Outbox outbox) {
+	private final TransactionTemplate transactions;
+
+	OrderService(OrderRepository orders, InventoryClient inventory, Outbox outbox, TransactionTemplate transactions) {
 		this.orders = orders;
 		this.inventory = inventory;
 		this.outbox = outbox;
+		this.transactions = transactions;
 	}
 
 	// Another customer's order is reported as unknown, so nobody can find out which order IDs exist
@@ -73,11 +77,13 @@ public class OrderService {
 
 	@Transactional
 	public Order pay(UUID id, String customerId) {
-		Order order = get(id, customerId);
+		Order order = lock(id, customerId);
 		if (order.getStatus() == Order.Status.PAID) {
-			// Payment providers retry their callbacks. Two at the very same moment can both get past this check,
-			// which is fine: inventory ignores the repeated event.
-			return order;
+			return order; // payment providers retry their callbacks
+		}
+		if (order.getStatus() == Order.Status.CANCELLED) {
+			// Its units are already back on sale
+			throw new IllegalStateException("This order was cancelled. Place it again.");
 		}
 		if (order.getReservedUntil().isBefore(Instant.now())) {
 			throw new IllegalStateException("The hold on this order ran out. Place it again.");
@@ -86,6 +92,30 @@ public class OrderService {
 		// Same transaction as the status change: the event exists if and only if the payment was recorded
 		outbox.add(ORDER_PAID, id, new OrderPaid(id, order.getReservationId()));
 		return order;
+	}
+
+	/**
+	 * Cancels an unpaid order and gives its units back. The cancellation is committed before inventory is called,
+	 * so units never go back on sale for an order that can still be paid. Safe to repeat: if inventory can't be
+	 * reached, cancelling again gives the units back, and otherwise the hold expires by itself.
+	 */
+	public Order cancel(UUID id, String customerId) {
+		Order order = transactions.execute(tx -> {
+			Order locked = lock(id, customerId);
+			if (locked.getStatus() == Order.Status.PAID) {
+				// ponytail: no refunds; add them together with a real payment provider
+				throw new IllegalStateException("This order is paid and can't be cancelled.");
+			}
+			locked.markCancelled();
+			return locked;
+		});
+		inventory.release(order.getReservationId()); // inventory only releases a hold that is still active
+		return order;
+	}
+
+	private Order lock(UUID id, String customerId) {
+		return orders.findForUpdateByIdAndCustomerId(id, customerId)
+			.orElseThrow(() -> new NoSuchElementException("Unknown order " + id));
 	}
 
 }
