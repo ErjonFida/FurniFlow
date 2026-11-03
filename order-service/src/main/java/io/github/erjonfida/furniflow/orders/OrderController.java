@@ -8,8 +8,11 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
+import io.github.erjonfida.furniflow.orders.OrderService.Item;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -29,14 +32,15 @@ import org.springframework.web.client.ResourceAccessException;
 @RequestMapping("/api/orders")
 class OrderController {
 
-	record PlaceOrderRequest(@NotBlank String sku, @Positive int quantity) {
+	// The cart. Each line costs a call to inventory, hence the cap.
+	record PlaceOrderRequest(@NotEmpty @Size(max = 50) List<@NotNull @Valid Item> items) {
 	}
 
-	record OrderView(UUID id, String customer, String sku, int quantity, Order.Status status, Instant reservedUntil) {
+	record OrderView(UUID id, String customer, List<Item> items, Order.Status status, Instant reservedUntil) {
 
 		static OrderView of(Order o) {
-			return new OrderView(o.getId(), o.getCustomer(), o.getSku(), o.getQuantity(), o.getStatus(),
-					o.getReservedUntil());
+			List<Item> items = o.getLines().stream().map(line -> new Item(line.sku(), line.quantity())).toList();
+			return new OrderView(o.getId(), o.getCustomer(), items, o.getStatus(), o.getReservedUntil());
 		}
 
 	}
@@ -54,8 +58,7 @@ class OrderController {
 	OrderView place(@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 64) String idempotencyKey,
 			@Valid @RequestBody PlaceOrderRequest request, JwtAuthenticationToken customer) {
 		String username = customer.getToken().getClaimAsString("preferred_username");
-		return OrderView.of(orders.place(customer.getName(), username, idempotencyKey, request.sku(),
-				request.quantity()));
+		return OrderView.of(orders.place(customer.getName(), username, idempotencyKey, request.items()));
 	}
 
 	// ponytail: no paging, fine for a customer's own orders

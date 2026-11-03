@@ -33,6 +33,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.ErrorResponseException;
 
+import io.github.erjonfida.furniflow.orders.OrderService.Item;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -78,17 +80,21 @@ class OrderIntegrationTests {
 
 	@Test
 	void placeRetryAndPayOverHttp() throws Exception {
-		InventoryClient.Reservation hold = hold(Duration.ofMinutes(15));
-		when(inventory.reserve("SOFA-1", 2)).thenReturn(hold);
+		InventoryClient.Reservation sofas = hold(Duration.ofMinutes(15));
+		InventoryClient.Reservation chairs = hold(Duration.ofMinutes(15));
+		when(inventory.reserve("SOFA-1", 2)).thenReturn(sofas);
+		when(inventory.reserve("CHAIR-1", 4)).thenReturn(chairs);
+		String[] cart = { line("SOFA-1", 2), line("CHAIR-1", 4) };
 
-		String placed = mvc.perform(place("alice", key, "SOFA-1", 2))
+		String placed = mvc.perform(order("alice", key, cart))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.status").value("RESERVED"))
+			.andExpect(jsonPath("$.items[1].sku").value("CHAIR-1"))
 			.andReturn().getResponse().getContentAsString();
 		String id = JsonPath.read(placed, "$.id");
 
 		// The client retries (say its connection dropped): the same order comes back, nothing is reserved twice
-		mvc.perform(place("alice", key, "SOFA-1", 2))
+		mvc.perform(order("alice", key, cart))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.id").value(id));
 		verify(inventory, times(1)).reserve("SOFA-1", 2);
@@ -96,7 +102,7 @@ class OrderIntegrationTests {
 		mvc.perform(post("/api/orders/{id}/pay", id).with(as("alice", "customer")))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("PAID"));
-		assertThat(paidEventFor(id)).contains(hold.id().toString());
+		assertThat(paidEventFor(id)).contains(sofas.id().toString(), chairs.id().toString());
 	}
 
 	@Test
@@ -130,7 +136,7 @@ class OrderIntegrationTests {
 		mvc.perform(get("/api/orders/all").with(as("alice", "customer"))).andExpect(status().isForbidden());
 		// Usernames, not the IDs in the tokens' subjects
 		mvc.perform(get("/api/orders/all").with(as("ada", "admin")))
-			.andExpect(jsonPath("$[?(@.sku == '%s')].customer", sku).value(containsInAnyOrder("alice", "carol")));
+			.andExpect(jsonPath("$[?(@.items[0].sku == '%s')].customer", sku).value(containsInAnyOrder("alice", "carol")));
 	}
 
 	@Test
@@ -164,7 +170,7 @@ class OrderIntegrationTests {
 		try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
 			List<Future<?>> retries = new ArrayList<>();
 			for (int i = 0; i < 20; i++) {
-				retries.add(pool.submit(() -> answers.add(orders.place("alice", "alice", key, "SOFA-1", 1).getId())));
+				retries.add(pool.submit(() -> answers.add(orders.place("alice", "alice", key, List.of(new Item("SOFA-1", 1))).getId())));
 			}
 			for (Future<?> retry : retries) {
 				retry.get(); // rethrows anything unexpected
@@ -180,7 +186,8 @@ class OrderIntegrationTests {
 	void errorsComeBackAsProblemDetails() throws Exception {
 		mvc.perform(post("/api/orders").with(as("alice", "customer"))
 			.contentType(APPLICATION_JSON)
-			.content(body("SOFA-1", 1))).andExpect(status().isBadRequest()); // no Idempotency-Key
+			.content("{\"items\": [" + line("SOFA-1", 1) + "]}")).andExpect(status().isBadRequest()); // no Idempotency-Key
+		mvc.perform(order("alice", key)).andExpect(status().isBadRequest()); // an empty cart
 
 		when(inventory.reserve("SOFA-1", 9)).thenThrow(new ErrorResponseException(CONFLICT,
 				ProblemDetail.forStatusAndDetail(CONFLICT, "Not enough stock of SOFA-1 to reserve 9"), null));
@@ -234,17 +241,22 @@ class OrderIntegrationTests {
 	}
 
 	private MockHttpServletRequestBuilder place(String customer, String key, String sku, int quantity) {
+		return order(customer, key, line(sku, quantity));
+	}
+
+	// A cart of these lines (see line)
+	private MockHttpServletRequestBuilder order(String customer, String key, String... lines) {
 		return post("/api/orders").with(as(customer, "customer"))
 			.header("Idempotency-Key", key)
 			.contentType(APPLICATION_JSON)
-			.content(body(sku, quantity));
+			.content("{\"items\": [" + String.join(", ", lines) + "]}");
 	}
 
 	private static InventoryClient.Reservation hold(Duration left) {
 		return new InventoryClient.Reservation(UUID.randomUUID(), Instant.now().plus(left));
 	}
 
-	private static String body(String sku, int quantity) {
+	private static String line(String sku, int quantity) {
 		return "{\"sku\": \"%s\", \"quantity\": %d}".formatted(sku, quantity);
 	}
 

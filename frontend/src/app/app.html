@@ -4,6 +4,7 @@
     @if (keycloak.authenticated) {
       <div class="d-flex align-items-center gap-3">
         @if (keycloak.hasRealmRole('customer')) {
+          <a class="nav-link" routerLink="/cart">Cart ({{ cart.count() }})</a>
           <a class="nav-link" routerLink="/orders">My orders</a>
         }
         @if (keycloak.hasRealmRole('admin')) {
@@ -13,7 +14,8 @@
         <button class="btn btn-outline-secondary btn-sm" type="button" (click)="signOut()">Sign out</button>
       </div>
     } @else {
-      <div class="d-flex gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <a class="nav-link me-2" routerLink="/cart">Cart ({{ cart.count() }})</a>
         <!-- Keycloak's own sign-up page. Everyone who registers becomes a customer (default role in the realm). -->
         <button class="btn btn-outline-primary btn-sm" type="button" (click)="keycloak.register()">Register</button>
         <button class="btn btn-primary btn-sm" type="button" (click)="keycloak.login()">Sign in</button>
