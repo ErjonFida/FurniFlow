@@ -150,7 +150,7 @@ class InventoryIntegrationTests {
 		UUID id = inventory.reserve(sku, 2).getId();
 
 		kafka.send("order-paid", """
-				{"orderId": "%s", "reservationId": "%s"}""".formatted(UUID.randomUUID(), id)).join();
+				{"orderId": "%s", "reservationIds": ["%s"]}""".formatted(UUID.randomUUID(), id)).join();
 
 		await().atMost(Duration.ofSeconds(30)).until(() -> reservationStatus(id), "CONFIRMED"::equals);
 		inventory.release(id); // sold units can't be released any more

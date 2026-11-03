@@ -3,20 +3,25 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import Keycloak from 'keycloak-js';
-import { ProductPage } from './product-page';
+import { Cart, CartPage } from './cart';
 
-describe('ProductPage', () => {
-  it('orders again with the same Idempotency-Key, so a retry never places a second order', () => {
+describe('CartPage', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('orders the whole cart, again with the same Idempotency-Key, so a retry never places a second order', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: Keycloak, useValue: { authenticated: true, hasRealmRole: () => true } },
+        { provide: Keycloak, useValue: { authenticated: true } },
       ],
     });
-    const fixture = TestBed.createComponent(ProductPage);
-    fixture.componentRef.setInput('sku', 'SOFA-1');
+    const cart = TestBed.inject(Cart);
+    cart.add('SOFA-1', 1);
+    cart.add('CHAIR-1', 4);
+    cart.add('SOFA-1', 1); // the same product twice is one line
+    const fixture = TestBed.createComponent(CartPage);
     const server = TestBed.inject(HttpTestingController);
 
     fixture.componentInstance.order();
@@ -25,7 +30,7 @@ describe('ProductPage', () => {
     fixture.componentInstance.order();
     const retry = server.expectOne('/api/orders');
 
-    expect(first.request.body).toEqual({ sku: 'SOFA-1', quantity: 1 });
+    expect(first.request.body).toEqual({ items: [{ sku: 'SOFA-1', quantity: 2 }, { sku: 'CHAIR-1', quantity: 4 }] });
     expect(first.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
     expect(retry.request.headers.get('Idempotency-Key')).toBe(first.request.headers.get('Idempotency-Key'));
   });

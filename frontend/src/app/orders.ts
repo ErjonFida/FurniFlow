@@ -6,8 +6,7 @@ import { RouterLink } from '@angular/router';
 export interface Order {
   id: string;
   customer: string;
-  sku: string;
-  quantity: number;
+  items: { sku: string; quantity: number }[];
   status: 'RESERVED' | 'PAID' | 'CANCELLED';
   reservedUntil: string;
 }
@@ -24,13 +23,16 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
     @if (orders.hasValue()) {
       <table class="table align-middle">
         <thead>
-          <tr><th>Product</th><th>Quantity</th><th>Status</th><th></th></tr>
+          <tr><th>Items</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
           @for (order of orders.value(); track order.id) {
             <tr>
-              <td><a [routerLink]="['/products', order.sku]">{{ order.sku }}</a></td>
-              <td>{{ order.quantity }}</td>
+              <td>
+                @for (item of order.items; track $index) {
+                  <div>{{ item.quantity }} × <a [routerLink]="['/products', item.sku]">{{ item.sku }}</a></div>
+                }
+              </td>
               @if (order.status === 'PAID') {
                 <td>Paid</td>
                 <td></td>
@@ -49,7 +51,7 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
               }
             </tr>
           } @empty {
-            <tr><td colspan="4">No orders yet.</td></tr>
+            <tr><td colspan="3">No orders yet.</td></tr>
           }
         </tbody>
       </table>

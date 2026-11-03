@@ -2,21 +2,36 @@ package io.github.erjonfida.furniflow.orders;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Embeddable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 @Entity
 @Table(name = "orders")
 public class Order {
 
 	public enum Status { RESERVED, PAID, CANCELLED }
+
+	// One product in the order. Inventory holds its units under reservationId.
+	@Embeddable
+	public record Line(String sku, int quantity, UUID reservationId) {
+	}
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -29,29 +44,29 @@ public class Order {
 
 	private String idempotencyKey;
 
-	private String sku;
-
-	private int quantity;
+	// Eager: every view of an order shows its lines (and open-in-view is off). SUBSELECT loads the lines of a whole
+	// list of orders in one more query instead of one per order.
+	@ElementCollection(fetch = FetchType.EAGER)
+	@CollectionTable(name = "order_line", joinColumns = @JoinColumn(name = "order_id"))
+	@OrderColumn(name = "line_no")
+	@Fetch(FetchMode.SUBSELECT)
+	private List<Line> lines = new ArrayList<>();
 
 	@Enumerated(EnumType.STRING)
 	private Status status;
 
-	private UUID reservationId;
-
+	// When the earliest of the lines' holds runs out
 	private Instant reservedUntil;
 
 	protected Order() {
 	}
 
-	Order(String customerId, String customerName, String idempotencyKey, String sku, int quantity, UUID reservationId,
-			Instant reservedUntil) {
+	Order(String customerId, String customerName, String idempotencyKey, List<Line> lines, Instant reservedUntil) {
 		this.customerId = customerId;
 		this.customerName = customerName;
 		this.idempotencyKey = idempotencyKey;
-		this.sku = sku;
-		this.quantity = quantity;
+		this.lines = new ArrayList<>(lines);
 		this.status = Status.RESERVED;
-		this.reservationId = reservationId;
 		// PostgreSQL keeps microseconds: truncate now so a retried request gets back exactly the same response
 		this.reservedUntil = reservedUntil.truncatedTo(ChronoUnit.MICROS);
 	}
@@ -73,20 +88,16 @@ public class Order {
 		return customerName != null ? customerName : customerId;
 	}
 
-	public String getSku() {
-		return sku;
+	public List<Line> getLines() {
+		return lines;
 	}
 
-	public int getQuantity() {
-		return quantity;
+	public List<UUID> getReservationIds() {
+		return lines.stream().map(Line::reservationId).toList();
 	}
 
 	public Status getStatus() {
 		return status;
-	}
-
-	public UUID getReservationId() {
-		return reservationId;
 	}
 
 	public Instant getReservedUntil() {

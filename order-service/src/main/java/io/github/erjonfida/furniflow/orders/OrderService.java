@@ -1,10 +1,14 @@
 package io.github.erjonfida.furniflow.orders;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -16,8 +20,12 @@ public class OrderService {
 
 	static final String ORDER_PAID = "order-paid";
 
-	/** The event inventory-service needs to confirm the reservation. */
-	record OrderPaid(UUID orderId, UUID reservationId) {
+	/** The event inventory-service needs to confirm the reservations, one per line. */
+	record OrderPaid(UUID orderId, List<UUID> reservationIds) {
+	}
+
+	/** One product the customer wants, and how many. */
+	record Item(@NotBlank String sku, @Positive int quantity) {
 	}
 
 	private final OrderRepository orders;
@@ -57,20 +65,37 @@ public class OrderService {
 	 * database connection is held while we wait for inventory. If this fails after inventory reserved the units,
 	 * that reservation simply expires.
 	 */
-	public Order place(String customerId, String customerName, String idempotencyKey, String sku, int quantity) {
+	public Order place(String customerId, String customerName, String idempotencyKey, List<Item> items) {
 		Optional<Order> existing = orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey);
 		if (existing.isPresent()) {
 			return existing.get();
 		}
-		InventoryClient.Reservation reservation = inventory.reserve(sku, quantity);
+		List<Order.Line> lines = new ArrayList<>();
+		Instant reservedUntil = Instant.MAX;
 		try {
-			return orders.saveAndFlush(new Order(customerId, customerName, idempotencyKey, sku, quantity,
-					reservation.id(), reservation.expiresAt()));
+			// ponytail: one inventory call per line, fine for carts of a few products (the controller caps them);
+			// add a batch reservation endpoint to inventory if carts get big
+			for (Item item : items) {
+				InventoryClient.Reservation reservation = inventory.reserve(item.sku(), item.quantity());
+				lines.add(new Order.Line(item.sku(), item.quantity(), reservation.id()));
+				if (reservation.expiresAt().isBefore(reservedUntil)) {
+					reservedUntil = reservation.expiresAt();
+				}
+			}
+		}
+		catch (RuntimeException failed) {
+			// Say the second product is out of stock: give back what the lines before it reserved, so nothing is held
+			// for an order that doesn't exist
+			release(lines);
+			throw failed;
+		}
+		try {
+			return orders.saveAndFlush(new Order(customerId, customerName, idempotencyKey, lines, reservedUntil));
 		}
 		catch (DataIntegrityViolationException sameKey) {
 			// A concurrent retry with the same key saved its order first ((customer_id, idempotency_key) is UNIQUE).
 			// Give back the units we just reserved and answer with that order.
-			inventory.release(reservation.id());
+			release(lines);
 			return orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey).orElseThrow();
 		}
 	}
@@ -90,7 +115,7 @@ public class OrderService {
 		}
 		order.markPaid();
 		// Same transaction as the status change: the event exists if and only if the payment was recorded
-		outbox.add(ORDER_PAID, id, new OrderPaid(id, order.getReservationId()));
+		outbox.add(ORDER_PAID, id, new OrderPaid(id, order.getReservationIds()));
 		return order;
 	}
 
@@ -109,8 +134,12 @@ public class OrderService {
 			locked.markCancelled();
 			return locked;
 		});
-		inventory.release(order.getReservationId()); // inventory only releases a hold that is still active
+		release(order.getLines()); // inventory only releases a hold that is still active
 		return order;
+	}
+
+	private void release(List<Order.Line> lines) {
+		lines.forEach(line -> inventory.release(line.reservationId()));
 	}
 
 	private Order lock(UUID id, String customerId) {

@@ -107,14 +107,17 @@ export const parseAttributes = (text: string): Record<string, string> =>
       @if (orders.hasValue()) {
         <table class="table table-sm align-middle">
           <thead>
-            <tr><th>Customer</th><th>Product</th><th class="text-end">Quantity</th><th>Status</th></tr>
+            <tr><th>Customer</th><th>Items</th><th>Status</th></tr>
           </thead>
           <tbody>
             @for (order of orders.value(); track order.id) {
               <tr>
                 <td>{{ order.customer }}</td>
-                <td><a [routerLink]="['/products', order.sku]">{{ order.sku }}</a></td>
-                <td class="text-end">{{ order.quantity }}</td>
+                <td>
+                  @for (item of order.items; track $index) {
+                    <div>{{ item.quantity }} × <a [routerLink]="['/products', item.sku]">{{ item.sku }}</a></div>
+                  }
+                </td>
                 @if (order.status === 'PAID') {
                   <td>Paid</td>
                 } @else if (order.status === 'CANCELLED') {
@@ -126,7 +129,7 @@ export const parseAttributes = (text: string): Record<string, string> =>
                 }
               </tr>
             } @empty {
-              <tr><td colspan="4">No orders yet.</td></tr>
+              <tr><td colspan="3">No orders yet.</td></tr>
             }
           </tbody>
         </table>

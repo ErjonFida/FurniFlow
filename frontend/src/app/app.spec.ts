@@ -19,6 +19,7 @@ describe('App', () => {
     expect(page.querySelector('.navbar-brand')?.textContent).toContain('FurniFlow');
     expect(page.textContent).toContain('Sign in');
     expect(page.textContent).toContain('Register');
+    expect(page.querySelector('a[href="/cart"]')).not.toBeNull(); // shopping before signing in
   });
 
   it('shows the user and, for admins, the admin page', () => {
@@ -30,5 +31,6 @@ describe('App', () => {
     expect(page.textContent).toContain('ada');
     expect(page.querySelector('a[href="/admin"]')).not.toBeNull();
     expect(page.querySelector('a[href="/orders"]')).toBeNull(); // admins don't shop
+    expect(page.querySelector('a[href="/cart"]')).toBeNull();
   });
 });
