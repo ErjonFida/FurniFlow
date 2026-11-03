@@ -134,6 +134,29 @@ class OrderIntegrationTests {
 	}
 
 	@Test
+	void customersCancelOrdersUntilTheyPay() throws Exception {
+		InventoryClient.Reservation hold = hold(Duration.ofMinutes(15));
+		when(inventory.reserve(any(), anyInt())).thenReturn(hold).thenAnswer(call -> hold(Duration.ofMinutes(15)));
+		String id = JsonPath.read(
+				mvc.perform(place("alice", key, "SOFA-1", 1)).andReturn().getResponse().getContentAsString(), "$.id");
+
+		mvc.perform(post("/api/orders/{id}/cancel", id).with(as("bob", "customer"))).andExpect(status().isNotFound());
+		mvc.perform(post("/api/orders/{id}/cancel", id).with(as("alice", "customer")))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("CANCELLED"));
+		verify(inventory).release(hold.id());
+		mvc.perform(post("/api/orders/{id}/pay", id).with(as("alice", "customer")))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.detail").value(containsString("cancelled")));
+
+		String paid = JsonPath.read(mvc.perform(place("alice", key + "-2", "SOFA-1", 1))
+			.andReturn().getResponse().getContentAsString(), "$.id");
+		mvc.perform(post("/api/orders/{id}/pay", paid).with(as("alice", "customer"))).andExpect(status().isOk());
+		mvc.perform(post("/api/orders/{id}/cancel", paid).with(as("alice", "customer")))
+			.andExpect(status().isConflict());
+	}
+
+	@Test
 	void concurrentRetriesCreateOneOrder() throws Exception {
 		when(inventory.reserve(any(), anyInt())).thenAnswer(call -> hold(Duration.ofMinutes(15)));
 		Set<UUID> answers = ConcurrentHashMap.newKeySet();

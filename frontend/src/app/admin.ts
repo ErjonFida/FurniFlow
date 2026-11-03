@@ -117,6 +117,8 @@ export const parseAttributes = (text: string): Record<string, string> =>
                 <td class="text-end">{{ order.quantity }}</td>
                 @if (order.status === 'PAID') {
                   <td>Paid</td>
+                } @else if (order.status === 'CANCELLED') {
+                  <td>Cancelled</td>
                 } @else if (isHeld(order)) {
                   <td>Reserved until {{ order.reservedUntil | date: 'short' }}</td>
                 } @else {
