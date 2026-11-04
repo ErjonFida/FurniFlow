@@ -107,6 +107,7 @@ spec:
             - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI, value: "http://keycloak:8180/realms/furniflow/protocol/openid-connect/certs"}
             - {name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKENURI, value: "http://keycloak:8180/realms/furniflow/protocol/openid-connect/token"}
             - {name: SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_INVENTORY_CLIENTSECRET, valueFrom: {secretKeyRef: {name: furniflow, key: order-service-client-secret}}}
+            - {name: FURNIFLOW_CATALOGURL, value: "http://catalog-service:8091"}
             - {name: FURNIFLOW_INVENTORYURL, value: "http://inventory-service:8092"}
           resources: {requests: {cpu: 100m, memory: 768Mi}, limits: {memory: 768Mi}}
           startupProbe: {httpGet: {path: /actuator/health/liveness, port: http}, periodSeconds: 2, failureThreshold: 60}

@@ -3,8 +3,8 @@
 Order and stock platform for a furniture business: online shop, B2B clients and admin compete for the same stock without overselling.
 
 ```
-Angular + Bootstrap ──► gateway :8090 ──► catalog-service   :8091  (MongoDB)
-                                     ├──► inventory-service :8092  (PostgreSQL) ◄──┐ reserve (HTTP)
+Angular + Bootstrap ──► gateway :8090 ──► catalog-service   :8091  (MongoDB)    ◄──┐ prices (HTTP)
+                                     ├──► inventory-service :8092  (PostgreSQL) ◄──┤ reserve (HTTP)
                                      └──► order-service     :8093  (PostgreSQL) ───┘ order-paid (Kafka)
 ```
 

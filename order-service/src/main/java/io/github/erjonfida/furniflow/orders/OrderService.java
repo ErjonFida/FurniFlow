@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.orders;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,14 +31,18 @@ public class OrderService {
 
 	private final OrderRepository orders;
 
+	private final CatalogClient catalog;
+
 	private final InventoryClient inventory;
 
 	private final Outbox outbox;
 
 	private final TransactionTemplate transactions;
 
-	OrderService(OrderRepository orders, InventoryClient inventory, Outbox outbox, TransactionTemplate transactions) {
+	OrderService(OrderRepository orders, CatalogClient catalog, InventoryClient inventory, Outbox outbox,
+			TransactionTemplate transactions) {
 		this.orders = orders;
+		this.catalog = catalog;
 		this.inventory = inventory;
 		this.outbox = outbox;
 		this.transactions = transactions;
@@ -62,8 +67,8 @@ public class OrderService {
 
 	/**
 	 * Places one order per idempotency key, however often the client retries. Not @Transactional on purpose: no
-	 * database connection is held while we wait for inventory. If this fails after inventory reserved the units,
-	 * that reservation simply expires.
+	 * database connection is held while we wait for the catalog or inventory. If this fails after inventory reserved
+	 * the units, that reservation simply expires.
 	 */
 	public Order place(String customerId, String customerName, String idempotencyKey, List<Item> items) {
 		Optional<Order> existing = orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey);
@@ -73,11 +78,13 @@ public class OrderService {
 		List<Order.Line> lines = new ArrayList<>();
 		Instant reservedUntil = Instant.MAX;
 		try {
-			// ponytail: one inventory call per line, fine for carts of a few products (the controller caps them);
-			// add a batch reservation endpoint to inventory if carts get big
+			// ponytail: a catalog and an inventory call per line, fine for carts of a few products (the controller caps
+			// them); add batch endpoints to both if carts get big
 			for (Item item : items) {
+				// From the catalog, never from the client: the request only says what and how many
+				BigDecimal price = catalog.price(item.sku());
 				InventoryClient.Reservation reservation = inventory.reserve(item.sku(), item.quantity());
-				lines.add(new Order.Line(item.sku(), item.quantity(), reservation.id()));
+				lines.add(new Order.Line(item.sku(), item.quantity(), price, reservation.id()));
 				if (reservation.expiresAt().isBefore(reservedUntil)) {
 					reservedUntil = reservation.expiresAt();
 				}

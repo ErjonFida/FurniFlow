@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.orders;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -28,9 +29,10 @@ public class Order {
 
 	public enum Status { RESERVED, PAID, CANCELLED }
 
-	// One product in the order. Inventory holds its units under reservationId.
+	// One product in the order, at the catalog's price when the order was placed. Inventory holds its units under
+	// reservationId.
 	@Embeddable
-	public record Line(String sku, int quantity, UUID reservationId) {
+	public record Line(String sku, int quantity, BigDecimal unitPrice, UUID reservationId) {
 	}
 
 	@Id
@@ -90,6 +92,16 @@ public class Order {
 
 	public List<Line> getLines() {
 		return lines;
+	}
+
+	// Exact: BigDecimal, no rounding. Orders placed before prices were kept (V5) have no total.
+	public BigDecimal getTotal() {
+		if (lines.stream().anyMatch(line -> line.unitPrice() == null)) {
+			return null;
+		}
+		return lines.stream()
+			.map(line -> line.unitPrice().multiply(BigDecimal.valueOf(line.quantity())))
+			.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 	public List<UUID> getReservationIds() {

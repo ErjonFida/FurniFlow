@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.orders;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -54,7 +55,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Real PostgreSQL and Kafka in Docker (Testcontainers); inventory-service is replaced by a mock. */
+/** Real PostgreSQL and Kafka in Docker (Testcontainers); catalog- and inventory-service are replaced by mocks. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -73,6 +74,9 @@ class OrderIntegrationTests {
 	JwtAuthenticationConverter tokens;
 
 	@MockitoBean
+	CatalogClient catalog;
+
+	@MockitoBean
 	InventoryClient inventory;
 
 	// The tests share one database, so each test (a new instance) gets its own key
@@ -84,6 +88,8 @@ class OrderIntegrationTests {
 		InventoryClient.Reservation chairs = hold(Duration.ofMinutes(15));
 		when(inventory.reserve("SOFA-1", 2)).thenReturn(sofas);
 		when(inventory.reserve("CHAIR-1", 4)).thenReturn(chairs);
+		when(catalog.price("SOFA-1")).thenReturn(new BigDecimal("1299.90"));
+		when(catalog.price("CHAIR-1")).thenReturn(new BigDecimal("149.50"));
 		String[] cart = { line("SOFA-1", 2), line("CHAIR-1", 4) };
 
 		String placed = mvc.perform(order("alice", key, cart))
@@ -98,6 +104,12 @@ class OrderIntegrationTests {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.id").value(id));
 		verify(inventory, times(1)).reserve("SOFA-1", 2);
+
+		// The prices the order was placed at, read back from the database, even after the catalog changes them
+		when(catalog.price("SOFA-1")).thenReturn(new BigDecimal("999.00"));
+		mvc.perform(get("/api/orders/{id}", id).with(as("alice", "customer")))
+			.andExpect(jsonPath("$.items[0].unitPrice").value(1299.90))
+			.andExpect(jsonPath("$.total").value(3197.80)); // 2 × 1299.90 + 4 × 149.50
 
 		mvc.perform(post("/api/orders/{id}/pay", id).with(as("alice", "customer")))
 			.andExpect(status().isOk())
