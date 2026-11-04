@@ -29,10 +29,10 @@ public class Order {
 
 	public enum Status { RESERVED, PAID, CANCELLED }
 
-	// One product in the order, at the catalog's price when the order was placed. Inventory holds its units under
-	// reservationId.
+	// One product in the order, with the catalog's name and price when the order was placed. Inventory holds its units
+	// under reservationId.
 	@Embeddable
-	public record Line(String sku, int quantity, BigDecimal unitPrice, UUID reservationId) {
+	public record Line(String sku, String productName, int quantity, BigDecimal unitPrice, UUID reservationId) {
 	}
 
 	@Id

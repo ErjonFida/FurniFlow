@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.orders;
 
+import java.math.BigDecimal;
 import java.util.NoSuchElementException;
 
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class CatalogClientTests {
 	MockRestServiceServer server;
 
 	@Test
-	void readsTheExactPriceAndReportsProductsNoLongerInTheShop() {
+	void readsTheNameAndExactPriceAndReportsProductsNoLongerInTheShop() {
 		server.expect(requestTo("http://catalog/api/catalog/products/SOFA-1")).andRespond(withSuccess("""
 				{"sku": "SOFA-1", "name": "Oslo sofa", "category": "sofas", "price": 1299.90, "attributes": {}}
 				""", MediaType.APPLICATION_JSON));
@@ -35,8 +36,9 @@ class CatalogClientTests {
 			.andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_PROBLEM_JSON)
 				.body("{\"status\": 404, \"detail\": \"Unknown product GONE-1\"}"));
 
-		assertThat(catalog.price("SOFA-1")).isEqualTo("1299.90"); // scale and all, not a double
-		assertThatThrownBy(() -> catalog.price("GONE-1")).isInstanceOf(NoSuchElementException.class)
+		// Scale and all, not a double
+		assertThat(catalog.product("SOFA-1")).isEqualTo(new CatalogClient.Product("Oslo sofa", new BigDecimal("1299.90")));
+		assertThatThrownBy(() -> catalog.product("GONE-1")).isInstanceOf(NoSuchElementException.class)
 			.hasMessage("Unknown product GONE-1");
 	}
 

@@ -47,8 +47,9 @@ class OrderServiceTests {
 	@Test
 	void losingASameKeyRaceGivesTheReservationBack() {
 		Order winner = new Order("alice", "Alice", "key-1",
-				List.of(new Order.Line("SOFA-1", 1, BigDecimal.TEN, UUID.randomUUID())), Instant.now());
+				List.of(new Order.Line("SOFA-1", "Oslo sofa", 1, BigDecimal.TEN, UUID.randomUUID())), Instant.now());
 		UUID ours = UUID.randomUUID();
+		when(catalog.product("SOFA-1")).thenReturn(new CatalogClient.Product("Oslo sofa", BigDecimal.TEN));
 		when(orders.findByCustomerIdAndIdempotencyKey("alice", "key-1"))
 			.thenReturn(Optional.empty(), Optional.of(winner));
 		when(inventory.reserve("SOFA-1", 1)).thenReturn(new InventoryClient.Reservation(ours, Instant.now()));
@@ -61,6 +62,7 @@ class OrderServiceTests {
 	@Test
 	void aLineThatCantBeReservedGivesTheEarlierLinesBack() {
 		UUID chairs = UUID.randomUUID();
+		when(catalog.product(any())).thenReturn(new CatalogClient.Product("A product", BigDecimal.TEN));
 		when(inventory.reserve("CHAIR-1", 4)).thenReturn(new InventoryClient.Reservation(chairs, Instant.now()));
 		when(inventory.reserve("SOFA-1", 1)).thenThrow(new ErrorResponseException(HttpStatus.CONFLICT));
 
@@ -73,7 +75,8 @@ class OrderServiceTests {
 	@Test
 	void payingTwiceSendsOneEvent() {
 		Order paid = new Order("alice", "Alice", "key-1",
-				List.of(new Order.Line("SOFA-1", 1, BigDecimal.TEN, UUID.randomUUID())), Instant.now().plusSeconds(60));
+				List.of(new Order.Line("SOFA-1", "Oslo sofa", 1, BigDecimal.TEN, UUID.randomUUID())),
+				Instant.now().plusSeconds(60));
 		paid.markPaid();
 		when(orders.findForUpdateByIdAndCustomerId(any(), any())).thenReturn(Optional.of(paid));
 
@@ -84,13 +87,15 @@ class OrderServiceTests {
 
 	@Test
 	void theTotalIsExactAndUnknownForOrdersFromBeforePricesWereKept() {
-		List<Order.Line> lines = List.of(new Order.Line("SOFA-1", 2, new BigDecimal("1299.90"), UUID.randomUUID()),
-				new Order.Line("CHAIR-1", 3, new BigDecimal("0.10"), UUID.randomUUID())); // 0.1 * 3 isn't 0.3 in doubles
+		// 0.1 * 3 isn't 0.3 in doubles
+		List<Order.Line> lines = List.of(
+				new Order.Line("SOFA-1", "Oslo sofa", 2, new BigDecimal("1299.90"), UUID.randomUUID()),
+				new Order.Line("CHAIR-1", "Oak chair", 3, new BigDecimal("0.10"), UUID.randomUUID()));
 		assertThat(new Order("alice", "Alice", "key-1", lines, Instant.now()).getTotal())
 			.isEqualByComparingTo("2600.10");
 
-		Order old = new Order("alice", "Alice", "key-2", List.of(new Order.Line("SOFA-1", 1, null, UUID.randomUUID())),
-				Instant.now());
+		Order old = new Order("alice", "Alice", "key-2",
+				List.of(new Order.Line("SOFA-1", null, 1, null, UUID.randomUUID())), Instant.now());
 		assertThat(old.getTotal()).isNull();
 	}
 

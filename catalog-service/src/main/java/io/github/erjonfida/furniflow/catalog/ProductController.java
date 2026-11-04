@@ -58,7 +58,8 @@ class ProductController {
 				request.description(), Objects.requireNonNullElse(request.attributes(), Map.of())));
 	}
 
-	// Takes it out of the shop. Its stock and past orders only refer to the SKU, so they stay.
+	// Takes it out of the shop. Its stock only refers to the SKU and past orders keep their own copy of the name and
+	// price, so they stay.
 	@DeleteMapping("/{sku}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void delete(@PathVariable String sku) {
