@@ -32,7 +32,8 @@ export class Cart {
   }
 }
 
-// The cart and checkout. Names and prices come from the catalog; order-service only gets SKUs and quantities.
+// The cart and checkout. Names and prices come from the catalog. order-service only gets SKUs and quantities and
+// looks the prices up again itself, so the price an order keeps can't be made up in the browser.
 @Component({
   selector: 'app-cart-page',
   imports: [CurrencyPipe, RouterLink],

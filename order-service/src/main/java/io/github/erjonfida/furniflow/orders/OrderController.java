@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.orders;
 
+import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.List;
@@ -32,15 +33,23 @@ import org.springframework.web.client.ResourceAccessException;
 @RequestMapping("/api/orders")
 class OrderController {
 
-	// The cart. Each line costs a call to inventory, hence the cap.
+	// The cart. Each line costs a call to the catalog and one to inventory, hence the cap. No prices: order-service
+	// looks them up itself.
 	record PlaceOrderRequest(@NotEmpty @Size(max = 50) List<@NotNull @Valid Item> items) {
 	}
 
-	record OrderView(UUID id, String customer, List<Item> items, Order.Status status, Instant reservedUntil) {
+	record OrderView(UUID id, String customer, List<Line> items, BigDecimal total, Order.Status status,
+			Instant reservedUntil) {
+
+		record Line(String sku, int quantity, BigDecimal unitPrice) {
+		}
 
 		static OrderView of(Order o) {
-			List<Item> items = o.getLines().stream().map(line -> new Item(line.sku(), line.quantity())).toList();
-			return new OrderView(o.getId(), o.getCustomer(), items, o.getStatus(), o.getReservedUntil());
+			List<Line> items = o.getLines()
+				.stream()
+				.map(line -> new Line(line.sku(), line.quantity(), line.unitPrice()))
+				.toList();
+			return new OrderView(o.getId(), o.getCustomer(), items, o.getTotal(), o.getStatus(), o.getReservedUntil());
 		}
 
 	}
@@ -104,7 +113,7 @@ class OrderController {
 	// Timed out or couldn't connect. Retrying with the same Idempotency-Key is safe.
 	@ExceptionHandler
 	ProblemDetail inventoryUnavailable(ResourceAccessException e) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, "Inventory is not answering. Try again.");
+		return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, "The catalog or inventory is not answering. Try again.");
 	}
 
 }

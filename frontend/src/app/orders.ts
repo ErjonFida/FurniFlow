@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -6,7 +6,9 @@ import { RouterLink } from '@angular/router';
 export interface Order {
   id: string;
   customer: string;
-  items: { sku: string; quantity: number }[];
+  // Prices as they were when the order was placed. Orders from before prices were kept have none (null).
+  items: { sku: string; quantity: number; unitPrice: number | null }[];
+  total: number | null;
   status: 'RESERVED' | 'PAID' | 'CANCELLED';
   reservedUntil: string;
 }
@@ -17,13 +19,13 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
 // The signed-in customer's orders. order-service only ever returns their own.
 @Component({
   selector: 'app-orders',
-  imports: [DatePipe, RouterLink],
+  imports: [CurrencyPipe, DatePipe, RouterLink],
   template: `
     <h1 class="h3 mb-3">My orders</h1>
     @if (orders.hasValue()) {
       <table class="table align-middle">
         <thead>
-          <tr><th>Items</th><th>Status</th><th></th></tr>
+          <tr><th>Items</th><th class="text-end">Total</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
           @for (order of orders.value(); track order.id) {
@@ -33,6 +35,7 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
                   <div>{{ item.quantity }} × <a [routerLink]="['/products', item.sku]">{{ item.sku }}</a></div>
                 }
               </td>
+              <td class="text-end">{{ order.total | currency: 'EUR' }}</td>
               @if (order.status === 'PAID') {
                 <td>Paid</td>
                 <td></td>
@@ -51,7 +54,7 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
               }
             </tr>
           } @empty {
-            <tr><td colspan="3">No orders yet.</td></tr>
+            <tr><td colspan="4">No orders yet.</td></tr>
           }
         </tbody>
       </table>

@@ -1,5 +1,6 @@
 package io.github.erjonfida.furniflow.orders;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +33,9 @@ class OrderServiceTests {
 	OrderRepository orders;
 
 	@Mock
+	CatalogClient catalog;
+
+	@Mock
 	InventoryClient inventory;
 
 	@Mock
@@ -42,8 +46,8 @@ class OrderServiceTests {
 
 	@Test
 	void losingASameKeyRaceGivesTheReservationBack() {
-		Order winner = new Order("alice", "Alice", "key-1", List.of(new Order.Line("SOFA-1", 1, UUID.randomUUID())),
-				Instant.now());
+		Order winner = new Order("alice", "Alice", "key-1",
+				List.of(new Order.Line("SOFA-1", 1, BigDecimal.TEN, UUID.randomUUID())), Instant.now());
 		UUID ours = UUID.randomUUID();
 		when(orders.findByCustomerIdAndIdempotencyKey("alice", "key-1"))
 			.thenReturn(Optional.empty(), Optional.of(winner));
@@ -68,14 +72,26 @@ class OrderServiceTests {
 
 	@Test
 	void payingTwiceSendsOneEvent() {
-		Order paid = new Order("alice", "Alice", "key-1", List.of(new Order.Line("SOFA-1", 1, UUID.randomUUID())),
-				Instant.now().plusSeconds(60));
+		Order paid = new Order("alice", "Alice", "key-1",
+				List.of(new Order.Line("SOFA-1", 1, BigDecimal.TEN, UUID.randomUUID())), Instant.now().plusSeconds(60));
 		paid.markPaid();
 		when(orders.findForUpdateByIdAndCustomerId(any(), any())).thenReturn(Optional.of(paid));
 
 		service.pay(UUID.randomUUID(), "alice");
 
 		verifyNoInteractions(outbox);
+	}
+
+	@Test
+	void theTotalIsExactAndUnknownForOrdersFromBeforePricesWereKept() {
+		List<Order.Line> lines = List.of(new Order.Line("SOFA-1", 2, new BigDecimal("1299.90"), UUID.randomUUID()),
+				new Order.Line("CHAIR-1", 3, new BigDecimal("0.10"), UUID.randomUUID())); // 0.1 * 3 isn't 0.3 in doubles
+		assertThat(new Order("alice", "Alice", "key-1", lines, Instant.now()).getTotal())
+			.isEqualByComparingTo("2600.10");
+
+		Order old = new Order("alice", "Alice", "key-2", List.of(new Order.Line("SOFA-1", 1, null, UUID.randomUUID())),
+				Instant.now());
+		assertThat(old.getTotal()).isNull();
 	}
 
 }

@@ -17,7 +17,7 @@ spring:
       enabled: true
   http:
     clients:
-      # A slow inventory-service must not hang order requests
+      # A slow catalog- or inventory-service must not hang order requests
       connect-timeout: 2s
       read-timeout: 5s
   security:
@@ -42,4 +42,5 @@ spring:
             token-uri: http://localhost:8180/realms/furniflow/protocol/openid-connect/token
 
 furniflow:
+  catalog-url: http://localhost:8091
   inventory-url: http://localhost:8092
