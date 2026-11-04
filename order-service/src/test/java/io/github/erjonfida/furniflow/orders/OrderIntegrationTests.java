@@ -19,6 +19,7 @@ import com.jayway.jsonpath.JsonPath;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,14 +83,20 @@ class OrderIntegrationTests {
 	// The tests share one database, so each test (a new instance) gets its own key
 	final String key = UUID.randomUUID().toString();
 
+	// Every product is in the catalog unless a test says otherwise
+	@BeforeEach
+	void catalogKnowsEveryProduct() {
+		when(catalog.product(any())).thenReturn(new CatalogClient.Product("A product", BigDecimal.TEN));
+	}
+
 	@Test
 	void placeRetryAndPayOverHttp() throws Exception {
 		InventoryClient.Reservation sofas = hold(Duration.ofMinutes(15));
 		InventoryClient.Reservation chairs = hold(Duration.ofMinutes(15));
 		when(inventory.reserve("SOFA-1", 2)).thenReturn(sofas);
 		when(inventory.reserve("CHAIR-1", 4)).thenReturn(chairs);
-		when(catalog.price("SOFA-1")).thenReturn(new BigDecimal("1299.90"));
-		when(catalog.price("CHAIR-1")).thenReturn(new BigDecimal("149.50"));
+		when(catalog.product("SOFA-1")).thenReturn(new CatalogClient.Product("Oslo sofa", new BigDecimal("1299.90")));
+		when(catalog.product("CHAIR-1")).thenReturn(new CatalogClient.Product("Oak chair", new BigDecimal("149.50")));
 		String[] cart = { line("SOFA-1", 2), line("CHAIR-1", 4) };
 
 		String placed = mvc.perform(order("alice", key, cart))
@@ -105,9 +112,10 @@ class OrderIntegrationTests {
 			.andExpect(jsonPath("$.id").value(id));
 		verify(inventory, times(1)).reserve("SOFA-1", 2);
 
-		// The prices the order was placed at, read back from the database, even after the catalog changes them
-		when(catalog.price("SOFA-1")).thenReturn(new BigDecimal("999.00"));
+		// The name and prices the order was placed with, read back from the database, even after the catalog changes them
+		when(catalog.product("SOFA-1")).thenReturn(new CatalogClient.Product("Renamed sofa", new BigDecimal("999.00")));
 		mvc.perform(get("/api/orders/{id}", id).with(as("alice", "customer")))
+			.andExpect(jsonPath("$.items[0].name").value("Oslo sofa"))
 			.andExpect(jsonPath("$.items[0].unitPrice").value(1299.90))
 			.andExpect(jsonPath("$.total").value(3197.80)); // 2 × 1299.90 + 4 × 149.50
 

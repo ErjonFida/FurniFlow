@@ -1,6 +1,5 @@
 package io.github.erjonfida.furniflow.orders;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,9 +81,9 @@ public class OrderService {
 			// them); add batch endpoints to both if carts get big
 			for (Item item : items) {
 				// From the catalog, never from the client: the request only says what and how many
-				BigDecimal price = catalog.price(item.sku());
+				CatalogClient.Product product = catalog.product(item.sku());
 				InventoryClient.Reservation reservation = inventory.reserve(item.sku(), item.quantity());
-				lines.add(new Order.Line(item.sku(), item.quantity(), price, reservation.id()));
+				lines.add(new Order.Line(item.sku(), product.name(), item.quantity(), product.price(), reservation.id()));
 				if (reservation.expiresAt().isBefore(reservedUntil)) {
 					reservedUntil = reservation.expiresAt();
 				}

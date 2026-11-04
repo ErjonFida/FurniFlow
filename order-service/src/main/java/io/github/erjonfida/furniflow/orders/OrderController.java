@@ -33,21 +33,21 @@ import org.springframework.web.client.ResourceAccessException;
 @RequestMapping("/api/orders")
 class OrderController {
 
-	// The cart. Each line costs a call to the catalog and one to inventory, hence the cap. No prices: order-service
-	// looks them up itself.
+	// The cart. Each line costs a call to the catalog and one to inventory, hence the cap. No names or prices:
+	// order-service looks them up itself.
 	record PlaceOrderRequest(@NotEmpty @Size(max = 50) List<@NotNull @Valid Item> items) {
 	}
 
 	record OrderView(UUID id, String customer, List<Line> items, BigDecimal total, Order.Status status,
 			Instant reservedUntil) {
 
-		record Line(String sku, int quantity, BigDecimal unitPrice) {
+		record Line(String sku, String name, int quantity, BigDecimal unitPrice) {
 		}
 
 		static OrderView of(Order o) {
 			List<Line> items = o.getLines()
 				.stream()
-				.map(line -> new Line(line.sku(), line.quantity(), line.unitPrice()))
+				.map(line -> new Line(line.sku(), line.productName(), line.quantity(), line.unitPrice()))
 				.toList();
 			return new OrderView(o.getId(), o.getCustomer(), items, o.getTotal(), o.getStatus(), o.getReservedUntil());
 		}

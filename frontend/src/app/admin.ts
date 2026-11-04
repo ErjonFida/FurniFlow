@@ -115,7 +115,7 @@ export const parseAttributes = (text: string): Record<string, string> =>
                 <td>{{ order.customer }}</td>
                 <td>
                   @for (item of order.items; track $index) {
-                    <div>{{ item.quantity }} × <a [routerLink]="['/products', item.sku]">{{ item.sku }}</a></div>
+                    <div>{{ item.quantity }} × <a [routerLink]="['/products', item.sku]">{{ item.name ?? item.sku }}</a></div>
                   }
                 </td>
                 <td class="text-end">{{ order.total | currency: 'EUR' }}</td>

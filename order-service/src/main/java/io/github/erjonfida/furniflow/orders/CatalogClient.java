@@ -9,11 +9,11 @@ import org.springframework.web.client.RestClient;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
-/** Reads prices from catalog-service. Browsing the catalog needs no token. */
+/** Reads products from catalog-service. Browsing the catalog needs no token. */
 @Component
 class CatalogClient {
 
-	record Product(BigDecimal price) {
+	record Product(String name, BigDecimal price) {
 	}
 
 	private final RestClient http;
@@ -23,15 +23,14 @@ class CatalogClient {
 	}
 
 	// A product taken out of the shop can't be ordered, even if inventory still has units of it
-	BigDecimal price(String sku) {
+	Product product(String sku) {
 		return http.get()
 			.uri("/api/catalog/products/{sku}", sku)
 			.retrieve()
 			.onStatus(status -> status.isSameCodeAs(NOT_FOUND), (request, response) -> {
 				throw new NoSuchElementException("Unknown product " + sku);
 			})
-			.body(Product.class)
-			.price();
+			.body(Product.class);
 	}
 
 }
