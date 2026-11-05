@@ -19,6 +19,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.data.mongodb.core.query.Criteria.where;
+import static org.springframework.data.mongodb.core.query.Query.query;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -41,6 +45,9 @@ class CatalogIntegrationTests {
 
 	@Autowired
 	JwtAuthenticationConverter tokens;
+
+	@Autowired
+	DemoProducts demoProducts;
 
 	// The tests share one database, so each test (a new instance) gets its own SKUs
 	final String sofa = "SOFA-" + UUID.randomUUID();
@@ -101,6 +108,44 @@ class CatalogIntegrationTests {
 
 		mvc.perform(saveWithImage(table, "javascript:alert(1)").with(as("admin"))).andExpect(status().isBadRequest());
 		mvc.perform(get("/api/catalog/products/{sku}", table)).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void aNewCatalogHasPhotographedDemoProductsInEveryRoom() throws Exception {
+		for (String room : List.of("Living room", "Dining room", "Bedroom", "Office", "Outdoor", "Hallway", "Kitchen",
+				"Kids' room", "Bathroom", "Home decor")) {
+			mvc.perform(get("/api/catalog/products"))
+				.andExpect(jsonPath("$[?(@.category == \"%s\" && @.imageUrl =~ /https:.*/)]", room).value(hasSize(greaterThanOrEqualTo(4))));
+		}
+	}
+
+	@Test
+	void aDeletedDemoProductStaysDeleted() throws Exception {
+		mvc.perform(delete("/api/catalog/products/{sku}", "BENCH-ALM").with(as("admin"))).andExpect(status().isNoContent());
+
+		demoProducts.run(null); // what the next start does
+
+		mvc.perform(get("/api/catalog/products/{sku}", "BENCH-ALM")).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void aDemoProductAddedToTheFileLaterStillArrives() throws Exception {
+		mongo.remove(query(where("_id").is("VASE-LEIRE")), DemoProducts.OFFERED);
+		mvc.perform(delete("/api/catalog/products/{sku}", "VASE-LEIRE").with(as("admin"))).andExpect(status().isNoContent());
+
+		demoProducts.run(null);
+
+		mvc.perform(get("/api/catalog/products/{sku}", "VASE-LEIRE")).andExpect(jsonPath("$.name").value("Leire ceramic vase"));
+	}
+
+	@Test
+	void aProductThatsAlreadyThereIsLeftAlone() throws Exception {
+		mongo.remove(query(where("_id").is("TBL-EIK")), DemoProducts.OFFERED);
+		mvc.perform(save("TBL-EIK", "Our own table", "10.00", null).with(as("admin"))).andExpect(status().isOk());
+
+		demoProducts.run(null);
+
+		mvc.perform(get("/api/catalog/products/{sku}", "TBL-EIK")).andExpect(jsonPath("$.name").value("Our own table"));
 	}
 
 	@Test

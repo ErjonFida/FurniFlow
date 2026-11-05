@@ -44,7 +44,7 @@ cd frontend && npx ng test --watch=false
 | Path | What |
 |---|---|
 | `gateway/` | Spring Cloud Gateway, routes `/api/{catalog,inventory,orders}/**` |
-| `catalog-service/` | Product catalog in MongoDB (furniture has varying attributes) |
+| `catalog-service/` | Product catalog in MongoDB (furniture has varying attributes). The first start adds demo products, with photos from [Unsplash](https://unsplash.com) |
 | `inventory-service/` | Stock and reservations in PostgreSQL (needs transactions) |
 | `order-service/` | Orders in PostgreSQL |
 | `frontend/` | Angular storefront and admin dashboard |
