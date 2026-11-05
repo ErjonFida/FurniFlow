@@ -29,9 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/catalog/products")
 class ProductController {
 
-	// Attribute names become MongoDB field names, which must not contain dots or start with $
+	// Attribute names become MongoDB field names, which must not contain dots or start with $.
+	// The shop's pages load the image from this address, so it has to be a web address.
 	record ProductRequest(@NotBlank String name, @NotBlank String category, @NotNull @Positive BigDecimal price,
-			String description, Map<@Pattern(regexp = "[\\w -]+") String, @NotBlank String> attributes) {
+			String description, Map<@Pattern(regexp = "[\\w -]+") String, @NotBlank String> attributes,
+			@Pattern(regexp = "https?://\\S+") String imageUrl) {
 	}
 
 	private final ProductRepository products;
@@ -40,7 +42,7 @@ class ProductController {
 		this.products = products;
 	}
 
-	// ponytail: the whole catalog in one response; add paging when it grows past a few hundred products
+	//the whole catalog in one response; add paging when it grows past a few hundred products
 	@GetMapping
 	List<Product> all() {
 		return products.findAll(Sort.by("name"));
@@ -55,7 +57,7 @@ class ProductController {
 	@PutMapping("/{sku}")
 	Product save(@PathVariable String sku, @Valid @RequestBody ProductRequest request) {
 		return products.save(new Product(sku, request.name(), request.category(), request.price(),
-				request.description(), Objects.requireNonNullElse(request.attributes(), Map.of())));
+				request.description(), Objects.requireNonNullElse(request.attributes(), Map.of()), request.imageUrl()));
 	}
 
 	// Takes it out of the shop. Its stock only refers to the SKU and past orders keep their own copy of the name and

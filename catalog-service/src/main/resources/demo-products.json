@@ -1,0 +1,311 @@
+[
+  {
+    "sku": "SOFA-OSLO", "name": "Oslo sofa", "category": "Living room", "price": 1299.90,
+    "description": "Three-seater in washed linen.",
+    "attributes": { "seats": "3", "fabric": "linen", "width": "220 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1698936061086-2bf99c7b9fc5?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "ARM-MIRA", "name": "Mira armchair", "category": "Living room", "price": 549.00,
+    "description": "A compact armchair with a high back, upholstered in mustard wool.",
+    "attributes": { "fabric": "wool", "width": "72 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "TBL-EIK", "name": "Eik coffee table", "category": "Living room", "price": 389.00,
+    "description": "Chunky solid oak, with an open shelf underneath for books.",
+    "attributes": { "wood": "oak", "size": "120 x 60 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1777513538143-8525eb3943f6?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "UNIT-HOLM", "name": "Holm media unit", "category": "Living room", "price": 679.00,
+    "description": "A long white unit with drawers above its cupboards, low enough to sit under a television.",
+    "attributes": { "finish": "painted white", "width": "180 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1762280237536-90b449615e8e?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "POUF-TOVE", "name": "Tove pouf", "category": "Living room", "price": 179.00,
+    "description": "A low oval pouf in tan leather.",
+    "attributes": { "material": "leather", "width": "80 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1764349109513-437ffb751893?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "TBL-FJORD", "name": "Fjord dining table", "category": "Dining room", "price": 899.00,
+    "description": "A dark table for six on slim black legs.",
+    "attributes": { "seats": "6", "size": "200 x 95 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1633505412556-82c0921e8f4a?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "CHAIR-ASK", "name": "Ask dining chair", "category": "Dining room", "price": 129.00,
+    "description": "Light beech with a gently curved seat and back.",
+    "attributes": { "wood": "beech" },
+    "imageUrl": "https://images.unsplash.com/photo-1699588772787-1eed3b726e0a?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "SIDE-VIK", "name": "Vik sideboard", "category": "Dining room", "price": 749.00,
+    "description": "A mid-century style sideboard in teak with six wide drawers.",
+    "attributes": { "wood": "teak", "width": "190 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1612908317776-a3afde8232fa?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "STOOL-TIND", "name": "Tind bar stool", "category": "Dining room", "price": 119.00,
+    "description": "A solid wood counter stool with a footrest.",
+    "attributes": { "seat height": "75 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1771365155377-d58bdc1e09b2?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "TBL-RUND", "name": "Rund pedestal table", "category": "Dining room", "price": 459.00,
+    "description": "A round table for four in light wood, on a single pedestal.",
+    "attributes": { "seats": "4", "diameter": "110 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1605239435870-67df4c54a0b3?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "BED-NORD", "name": "Nord bed", "category": "Bedroom", "price": 1120.00,
+    "description": "A 160 cm bed with a tall upholstered headboard.",
+    "attributes": { "mattress": "160 x 200 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1560185128-e173042f79dd?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "NIGHT-MORA", "name": "Mora nightstand", "category": "Bedroom", "price": 159.00,
+    "description": "Dark wood with deep drawers for everything that gathers by the bed.",
+    "attributes": { "height": "60 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1774578342100-f779e988c83d?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "WARD-ALVA", "name": "Alva wardrobe", "category": "Bedroom", "price": 1390.00,
+    "description": "A wide wood-veneer wardrobe with mirrored doors and open shelves.",
+    "attributes": { "width": "270 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1722349674028-a148f4364e43?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "DRAW-LINN", "name": "Linn chest of drawers", "category": "Bedroom", "price": 429.00,
+    "description": "A painted blue chest with a natural wood top.",
+    "attributes": { "finish": "painted blue", "width": "110 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1683731332610-23d833f5871f?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "VANITY-ELLE", "name": "Elle dressing table", "category": "Bedroom", "price": 519.00,
+    "description": "A dressing table with a mirror, side shelves and a matching stool.",
+    "attributes": { "includes": "stool", "width": "120 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1743058533210-303721a35d4a?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "DESK-STIG", "name": "Stig desk", "category": "Office", "price": 1150.00,
+    "description": "A statement desk with a slatted wooden front.",
+    "attributes": { "size": "180 x 80 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1784012980517-005c26585344?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "CHAIR-ARNE", "name": "Arne office chair", "category": "Office", "price": 389.00,
+    "description": "A black swivel chair with a padded bucket seat.",
+    "attributes": { "base": "swivel" },
+    "imageUrl": "https://images.unsplash.com/photo-1770316320132-e082373dd3f6?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "SHELF-FJELL", "name": "Fjell bookcase", "category": "Office", "price": 640.00,
+    "description": "A tall wooden bookcase with room for a whole library.",
+    "attributes": { "height": "220 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1588580000645-4562a6d2c839?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "CAB-BO", "name": "Bo filing cabinet", "category": "Office", "price": 289.00,
+    "description": "A steel cabinet with full-extension drawers.",
+    "attributes": { "material": "steel" },
+    "imageUrl": "https://images.unsplash.com/photo-1569235186275-626cb53b83ce?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "TBL-REN", "name": "Ren meeting table", "category": "Office", "price": 980.00,
+    "description": "An oval meeting table for eight. Chairs are sold separately.",
+    "attributes": { "seats": "8", "size": "240 x 120 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1571624436279-b272aff752b5?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "GSOFA-SOL", "name": "Sol garden sofa", "category": "Outdoor", "price": 1590.00,
+    "description": "A woven three-seater with weatherproof cushions.",
+    "attributes": { "seats": "3", "material": "woven rattan" },
+    "imageUrl": "https://images.unsplash.com/photo-1577421759415-bba870669383?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "LOUNGE-STRAND", "name": "Strand sun lounger", "category": "Outdoor", "price": 349.00,
+    "description": "A white reclining lounger for the terrace or the poolside.",
+    "attributes": { "length": "195 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1776500588122-46b26cf04240?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "TBL-SKOG", "name": "Skog picnic table", "category": "Outdoor", "price": 410.00,
+    "description": "Rough-sawn timber with benches attached, built to stay out all year.",
+    "attributes": { "seats": "6", "wood": "larch" },
+    "imageUrl": "https://images.unsplash.com/photo-1587563497519-be9666f3bb8a?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "CHAIR-VIND", "name": "Vind patio chair", "category": "Outdoor", "price": 229.00,
+    "description": "A woven frame with a thick, removable cushion.",
+    "attributes": { "material": "woven rope" },
+    "imageUrl": "https://images.unsplash.com/photo-1738293728561-d7057a3ad74f?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "BENCH-ALM", "name": "Alm garden bench", "category": "Outdoor", "price": 299.00,
+    "description": "A slatted wooden bench with room for three.",
+    "attributes": { "width": "150 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1621254887152-aa127535ef99?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "CONS-GANG", "name": "Gang console table", "category": "Hallway", "price": 249.00,
+    "description": "A slim wooden console with two white drawers, narrow enough for a hallway.",
+    "attributes": { "drawers": "2", "width": "100 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1788223900715-641af24db423?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "CUP-SKO", "name": "Sko hallway cupboard", "category": "Hallway", "price": 1190.00,
+    "description": "Full-height white cupboards around open shelves for shoes and bags.",
+    "attributes": { "finish": "painted white", "width": "180 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1683181181300-44c0c991a2cf?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "RAIL-KNAGG", "name": "Knagg coat rail", "category": "Hallway", "price": 139.00,
+    "description": "A freestanding steel rail for coats, with room for a hat on the end.",
+    "attributes": { "material": "steel", "width": "110 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "BENCH-ENTRE", "name": "Entre hall bench", "category": "Hallway", "price": 269.00,
+    "description": "A long, low wooden bench for pulling your boots on.",
+    "attributes": { "width": "160 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1758800601695-6516d7430b1c?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "MIRR-SPEIL", "name": "Speil hall mirror", "category": "Hallway", "price": 119.00,
+    "description": "A round mirror hung from a strap, for one last look on the way out.",
+    "attributes": { "diameter": "60 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1758279745605-1e03b0d62613?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "ISL-BRUK", "name": "Bruk kitchen island", "category": "Kitchen", "price": 1890.00,
+    "description": "A painted island with drawers and cupboards under a thick wooden worktop.",
+    "attributes": { "worktop": "pine", "size": "220 x 90 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1768486143865-342d8cc12c90?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "CAB-SKAP", "name": "Skap kitchen cabinets", "category": "Kitchen", "price": 2450.00,
+    "description": "A full run of white shaker cabinets, wall and base units together.",
+    "attributes": { "finish": "painted white" },
+    "imageUrl": "https://images.unsplash.com/photo-1601760561441-16420502c7e0?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "SHELF-HYLLE", "name": "Hylle open shelves", "category": "Kitchen", "price": 149.00,
+    "description": "Wooden shelves on black steel brackets, to keep your pans within reach.",
+    "attributes": { "width": "150 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1556910602-38f53e68e15d?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "TBL-MORGEN", "name": "Morgen breakfast table", "category": "Kitchen", "price": 379.00,
+    "description": "A small wooden table for two or four, made for slow mornings.",
+    "attributes": { "seats": "4" },
+    "imageUrl": "https://images.unsplash.com/photo-1771596378772-858323ca698f?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "STOOL-DISK", "name": "Disk counter stool", "category": "Kitchen", "price": 135.00,
+    "description": "A low-backed stool in dark wood, for the island or the counter.",
+    "attributes": { "seat height": "65 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1774612673121-7da610a4e1aa?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "BUNK-KOIE", "name": "Koie bunk bed", "category": "Kids' room", "price": 690.00,
+    "description": "A sturdy dark bunk bed, single over double, with a ladder built in.",
+    "attributes": { "sleeps": "3" },
+    "imageUrl": "https://images.unsplash.com/photo-1721743169043-dda0212ce3d4?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "BED-LITEN", "name": "Liten bed and desk", "category": "Kids' room", "price": 840.00,
+    "description": "A child's bed with a matching wall desk and chair.",
+    "attributes": { "mattress": "90 x 200 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1721395288477-b546804ce392?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "CUBE-LEKE", "name": "Leke cube storage", "category": "Kids' room", "price": 159.00,
+    "description": "White cube shelves, low enough for small hands to reach.",
+    "attributes": { "cubes": "6" },
+    "imageUrl": "https://images.unsplash.com/photo-1642379831546-67d5e2bf8bcc?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "COT-VUGGE", "name": "Vugge cot", "category": "Kids' room", "price": 329.00,
+    "description": "A white slatted cot on wooden legs.",
+    "attributes": { "mattress": "60 x 120 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1774578342155-8d7e44a18bfd?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "BASS-LULL", "name": "Lull bassinet", "category": "Kids' room", "price": 189.00,
+    "description": "A soft-sided bassinet with a folding hood, for the first few months.",
+    "attributes": { "hood": "folding" },
+    "imageUrl": "https://images.unsplash.com/photo-1458731909820-5850bdcaee0b?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "VAN-BAD", "name": "Bad vanity unit", "category": "Bathroom", "price": 469.00,
+    "description": "A wall-hung dark wood unit with two wide drawers under the basin.",
+    "attributes": { "drawers": "2", "width": "80 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1595428773960-5bea2830b067?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "VAN-SALVIE", "name": "Salvie double vanity", "category": "Bathroom", "price": 1290.00,
+    "description": "A sage green double vanity with a marble top.",
+    "attributes": { "top": "marble", "width": "150 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1682888818696-906287d759f5?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "MIRR-LYS", "name": "Lys backlit mirror", "category": "Bathroom", "price": 219.00,
+    "description": "A round mirror with a soft light behind it.",
+    "attributes": { "diameter": "70 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1595428774752-c87f23e7fcee?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "RAIL-VARME", "name": "Varme towel rail", "category": "Bathroom", "price": 179.00,
+    "description": "A white heated rail that keeps towels warm and dry.",
+    "attributes": { "height": "120 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1608651061499-ff031fbf6645?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "STOOL-TEAK", "name": "Teak bath stool", "category": "Bathroom", "price": 89.00,
+    "description": "A small teak stool, at home beside the bath.",
+    "attributes": { "wood": "teak" },
+    "imageUrl": "https://images.unsplash.com/photo-1651065206701-52cc07813da3?w=1000&q=75&auto=format"
+  },
+
+  {
+    "sku": "LAMP-BUE", "name": "Bue floor lamp", "category": "Home decor", "price": 199.00,
+    "description": "A black floor lamp with an adjustable shade.",
+    "attributes": { "height": "160 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "RUG-STRIPE", "name": "Stripe wool rug", "category": "Home decor", "price": 329.00,
+    "description": "Bold black bars on a cream wool ground.",
+    "attributes": { "material": "wool", "size": "200 x 300 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1762356317094-5826049a3641?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "MIRR-SIRKEL", "name": "Sirkel wall mirror", "category": "Home decor", "price": 159.00,
+    "description": "A round mirror inside a geometric black frame.",
+    "attributes": { "diameter": "80 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1592078528550-ba08b97ead10?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "VASE-LEIRE", "name": "Leire ceramic vase", "category": "Home decor", "price": 45.00,
+    "description": "A matte white ceramic vase with a narrow neck.",
+    "attributes": { "material": "ceramic", "height": "28 cm" },
+    "imageUrl": "https://images.unsplash.com/photo-1687191883721-257d8cad5b54?w=1000&q=75&auto=format"
+  },
+  {
+    "sku": "ART-RAMME", "name": "Ramme framed prints", "category": "Home decor", "price": 89.00,
+    "description": "Two black-framed prints, ready to hang.",
+    "attributes": { "pieces": "2" },
+    "imageUrl": "https://images.unsplash.com/photo-1452457005517-a0dd81caca2a?w=1000&q=75&auto=format"
+  }
+]
