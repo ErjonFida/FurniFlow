@@ -94,6 +94,16 @@ class CatalogIntegrationTests {
 	}
 
 	@Test
+	void productsKeepTheirImageAddress() throws Exception {
+		mvc.perform(saveWithImage(sofa, "https://images.example.com/sofa.jpg").with(as("admin"))).andExpect(status().isOk());
+		mvc.perform(get("/api/catalog/products/{sku}", sofa))
+			.andExpect(jsonPath("$.imageUrl").value("https://images.example.com/sofa.jpg"));
+
+		mvc.perform(saveWithImage(table, "javascript:alert(1)").with(as("admin"))).andExpect(status().isBadRequest());
+		mvc.perform(get("/api/catalog/products/{sku}", table)).andExpect(status().isNotFound());
+	}
+
+	@Test
 	void invalidProductsAreRejected() throws Exception {
 		mvc.perform(save(sofa, "", "1299.90", null).with(as("admin"))).andExpect(status().isBadRequest());
 		mvc.perform(save(sofa, "Oslo sofa", "-1", null).with(as("admin"))).andExpect(status().isBadRequest());
@@ -115,6 +125,11 @@ class CatalogIntegrationTests {
 		return put("/api/catalog/products/{sku}", sku).contentType(APPLICATION_JSON).content("""
 				{"name": "%s", "category": "Living room", "price": %s, "attributes": %s}"""
 			.formatted(name, price, attributes));
+	}
+
+	private static MockHttpServletRequestBuilder saveWithImage(String sku, String imageUrl) {
+		return put("/api/catalog/products/{sku}", sku).contentType(APPLICATION_JSON).content("""
+				{"name": "Oslo sofa", "category": "Living room", "price": 1299.90, "imageUrl": "%s"}""".formatted(imageUrl));
 	}
 
 }
