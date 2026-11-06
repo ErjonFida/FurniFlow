@@ -19,7 +19,7 @@ export const parseAttributes = (text: string): Record<string, string> =>
   imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h1 class="h3 mb-0">Admin</h1>
+      <h1 class="mb-0">Admin</h1>
       <a class="btn btn-outline-secondary btn-sm" [href]="usersUrl" target="_blank">Users and roles</a>
     </div>
     <div class="row g-4">
@@ -68,6 +68,10 @@ export const parseAttributes = (text: string): Record<string, string> =>
           <div>
             <label class="form-label" for="price">Price (EUR)</label>
             <input class="form-control" id="price" name="price" type="number" min="0.01" step="0.01" [(ngModel)]="product.price" required />
+          </div>
+          <div>
+            <label class="form-label" for="image">Image address</label>
+            <input class="form-control" id="image" name="image" type="url" pattern="https?://.*" [(ngModel)]="product.imageUrl" />
           </div>
           <div>
             <label class="form-label" for="description">Description</label>
@@ -151,7 +155,7 @@ export class Admin {
   );
   // Keycloak's admin console for this realm. The admin role may manage its users and their roles there, nothing else.
   protected readonly usersUrl = `${this.keycloak.authServerUrl}/admin/${this.keycloak.realm}/console/#/${this.keycloak.realm}/users`;
-  product ={ sku: '', name: '', category: '', price: null as number | null, description: '' };
+  product = { sku: '', name: '', category: '', price: null as number | null, description: '', imageUrl: '' };
   attributes = '';
   sku = '';
   quantity = 1;
@@ -159,15 +163,26 @@ export class Admin {
   private readonly fail = (e: HttpErrorResponse) => this.message.set(e.error?.detail ?? e.message);
 
   edit(p: Product) {
-    this.product = { sku: p.sku, name: p.name, category: p.category, price: p.price, description: p.description ?? '' };
+    this.product = {
+      sku: p.sku,
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      description: p.description ?? '',
+      imageUrl: p.imageUrl ?? '',
+    };
     this.attributes = Object.entries(p.attributes).map(([name, value]) => `${name}: ${value}`).join('\n');
     this.sku = p.sku; // restock the product being edited
   }
 
   save() {
-    const { sku, ...product } = this.product;
+    const { sku, imageUrl, ...product } = this.product;
     this.http
-      .put(`/api/catalog/products/${encodeURIComponent(sku.trim())}`, { ...product, attributes: parseAttributes(this.attributes) })
+      .put(`/api/catalog/products/${encodeURIComponent(sku.trim())}`, {
+        ...product,
+        imageUrl: imageUrl || null, // an empty field means no image, not an address that's empty
+        attributes: parseAttributes(this.attributes),
+      })
       .subscribe({
         next: () => {
           this.products.reload();

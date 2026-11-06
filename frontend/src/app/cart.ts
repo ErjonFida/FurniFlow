@@ -38,7 +38,7 @@ export class Cart {
   selector: 'app-cart-page',
   imports: [CurrencyPipe, RouterLink],
   template: `
-    <h1 class="h3 mb-3">Cart</h1>
+    <h1>Cart</h1>
     @if (lines().length) {
       <table class="table align-middle">
         <thead>
@@ -68,7 +68,7 @@ export class Cart {
         <button class="btn btn-primary" type="button" (click)="keycloak.login()">Sign in to order</button>
       }
     } @else {
-      <p>Your cart is empty. <a routerLink="/">Browse furniture</a></p>
+      <p>Your cart is empty. <a routerLink="/products">Browse furniture</a></p>
     }
     @if (message()) {
       <p class="mt-3 text-danger" role="alert">{{ message() }}</p>
@@ -81,7 +81,7 @@ export class CartPage {
   protected readonly keycloak = inject(Keycloak);
   protected readonly cart = inject(Cart);
 
-  // ponytail: loads the whole catalog to price a few lines; ask catalog-service for just these SKUs once it pages
+  //loads the whole catalog to price a few lines; ask catalog-service for just these SKUs once it pages
   private readonly products = httpResource<Product[]>(() => '/api/catalog/products');
   protected readonly lines = computed(() => {
     const catalog = new Map(this.products.hasValue() ? this.products.value().map((p) => [p.sku, p] as const) : []);
