@@ -10,5 +10,5 @@ import org.springframework.data.mongodb.core.mapping.Document;
 // so they live in a nested map instead of a column per attribute. The price is stored as an exact Decimal128.
 @Document
 public record Product(@Id String sku, String name, String category, BigDecimal price, String description,
-		Map<String, String> attributes) {
+		Map<String, String> attributes, String imageUrl) {
 }

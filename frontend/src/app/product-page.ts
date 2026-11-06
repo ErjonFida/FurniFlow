@@ -13,33 +13,50 @@ import { Product } from './products';
   template: `
     @if (product.hasValue()) {
       @let p = product.value();
-      <h1 class="h3">{{ p.name }}</h1>
-      <p class="text-body-secondary">{{ p.category }}</p>
-      <p>{{ p.description }}</p>
-      <dl class="row">
-        @for (attribute of p.attributes | keyvalue; track attribute.key) {
-          <dt class="col-sm-3">{{ attribute.key }}</dt>
-          <dd class="col-sm-9">{{ attribute.value }}</dd>
-        }
-      </dl>
-      <p class="fs-4 fw-semibold mb-1">{{ p.price | currency: 'EUR' }}</p>
-      <p>{{ available() ? available() + ' in stock' : 'Out of stock' }}</p>
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a routerLink="/">Home</a> /
+        <a routerLink="/products" [queryParams]="{ category: p.category }">{{ p.category }}</a> /
+        {{ p.name }}
+      </nav>
+      <div class="row g-4">
+        <div class="col-lg-5">
+          @if (p.imageUrl) {
+            <img class="product-photo product-photo-wide" [src]="p.imageUrl" [alt]="p.name" />
+          } @else {
+            <span class="product-photo product-photo-wide" aria-hidden="true">{{ p.name[0] }}</span>
+          }
+        </div>
+        <div class="col-lg-4">
+          <h1>{{ p.name }}</h1>
+          <p class="fs-5">{{ p.description }}</p>
+          <dl class="row">
+            @for (attribute of p.attributes | keyvalue; track attribute.key) {
+              <dt class="col-sm-4">{{ attribute.key }}</dt>
+              <dd class="col-sm-8">{{ attribute.value }}</dd>
+            }
+          </dl>
+        </div>
+        <div class="col-lg-3">
+          <div class="buy-box">
+            <p class="buy-box-price">{{ p.price | currency: 'EUR' }}</p>
+            <p>{{ available() ? available() + ' in stock' : 'Out of stock' }}</p>
 
-      <!-- Signed out is fine: the cart is kept in the browser until checkout -->
-      @if (!keycloak.authenticated || keycloak.hasRealmRole('customer')) {
-        <form class="row g-2 align-items-end" ngNativeValidate (ngSubmit)="add()">
-          <div class="col-auto">
-            <label class="form-label" for="quantity">Quantity</label>
-            <input class="form-control" id="quantity" name="quantity" type="number" min="1" [(ngModel)]="quantity" required />
+            <!-- Signed out is fine: the cart is kept in the browser until checkout -->
+            @if (!keycloak.authenticated || keycloak.hasRealmRole('customer')) {
+              <form class="vstack gap-3" ngNativeValidate (ngSubmit)="add()">
+                <div>
+                  <label class="form-label" for="quantity">Quantity</label>
+                  <input class="form-control" id="quantity" name="quantity" type="number" min="1" [(ngModel)]="quantity" required />
+                </div>
+                <button class="btn btn-primary" type="submit">Add to cart</button>
+              </form>
+            }
+            @if (added()) {
+              <p class="mt-3 mb-0" role="status">Added to your cart. <a routerLink="/cart">Go to cart</a></p>
+            }
           </div>
-          <div class="col-auto">
-            <button class="btn btn-primary" type="submit">Add to cart</button>
-          </div>
-        </form>
-      }
-      @if (added()) {
-        <p class="mt-3" role="status">Added to your cart. <a routerLink="/cart">Go to cart</a></p>
-      }
+        </div>
+      </div>
     } @else if (product.error()) {
       <p role="alert">This product doesn't exist.</p>
     }

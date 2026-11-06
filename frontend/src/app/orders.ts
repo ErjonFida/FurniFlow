@@ -21,7 +21,7 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
   selector: 'app-orders',
   imports: [CurrencyPipe, DatePipe, RouterLink],
   template: `
-    <h1 class="h3 mb-3">My orders</h1>
+    <h1>My orders</h1>
     @if (orders.hasValue()) {
       <table class="table align-middle">
         <thead>

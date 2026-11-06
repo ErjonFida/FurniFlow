@@ -1,29 +1,112 @@
-<nav class="navbar navbar-expand bg-body-tertiary border-bottom">
-  <div class="container">
-    <a class="navbar-brand" routerLink="/">FurniFlow</a>
-    @if (keycloak.authenticated) {
-      <div class="d-flex align-items-center gap-3">
-        @if (keycloak.hasRealmRole('customer')) {
-          <a class="nav-link" routerLink="/cart">Cart ({{ cart.count() }})</a>
-          <a class="nav-link" routerLink="/orders">My orders</a>
+<header class="site-header">
+  <nav class="header-start" aria-label="Main">
+    <!-- A mouse opens the menu by pointing at this. A tap or the keyboard opens it by pressing it. -->
+    <button type="button" popovertarget="products-menu" popovertargetaction="show"
+      (pointerenter)="keepMenuOpen($event, menu)" (pointerleave)="closeMenuSoon($event, menu)">
+      Furniture
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="m2 4 4 4 4-4" /></svg>
+    </button>
+    @if (keycloak.authenticated && keycloak.hasRealmRole('customer')) {
+      <a routerLink="/orders">My orders</a>
+    }
+    @if (keycloak.authenticated && keycloak.hasRealmRole('admin')) {
+      <a routerLink="/admin">Admin</a>
+    }
+  </nav>
+
+  <a class="brand" routerLink="/">FurniFlow</a>
+
+  <div class="header-end">
+    <form class="header-search" role="search" (submit)="$event.preventDefault(); search(searchBox.value)">
+      <input type="search" placeholder="Search furniture" aria-label="Search furniture" [value]="searched()" #searchBox />
+      <button type="submit" aria-label="Search">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
+          <circle cx="6.5" cy="6.5" r="5.5" />
+          <path d="M10.5 10.5 15 15" />
+        </svg>
+      </button>
+    </form>
+    <button class="account-button" type="button" popovertarget="account" aria-label="Account">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true">
+        <circle cx="10" cy="6.5" r="3.5" />
+        <path d="M3 18c0-3.9 3.1-6 7-6s7 2.1 7 6" />
+      </svg>
+    </button>
+    <!-- Admins don't shop -->
+    @if (!keycloak.authenticated || keycloak.hasRealmRole('customer')) {
+      <a class="cart-link" routerLink="/cart" [attr.aria-label]="'Cart (' + cart.count() + ')'">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M4 7h12l1 11H3L4 7Z" />
+          <path d="M7 9V5a3 3 0 0 1 6 0v4" />
+        </svg>
+        @if (cart.count()) {
+          <span>{{ cart.count() }}</span>
         }
-        @if (keycloak.hasRealmRole('admin')) {
-          <a class="nav-link" routerLink="/admin">Admin</a>
-        }
-        <span class="navbar-text">{{ keycloak.tokenParsed?.['preferred_username'] }}</span>
-        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="signOut()">Sign out</button>
+      </a>
+    }
+  </div>
+</header>
+
+<!-- Popovers: the browser closes them on Esc or a click elsewhere. styles.css places them against the header. -->
+<div class="products-menu" id="products-menu" popover #menu (toggle)="activeRoom.set(null)"
+  (pointerenter)="keepMenuOpen($event, menu)" (pointerleave)="closeMenuSoon($event, menu)">
+  <div class="menu-rooms">
+    <p class="eyebrow">Rooms</p>
+    <ul>
+      @for (room of rooms(); track room.name) {
+        <li>
+          <a routerLink="/products" [queryParams]="{ category: room.name }" [class.active]="room === activeRoom()"
+            (mouseenter)="activeRoom.set(room)" (focus)="activeRoom.set(room)" (click)="menu.hidePopover()">
+            @if (room.imageUrl) {
+              <img [src]="room.imageUrl" alt="" loading="lazy" />
+            }
+            {{ room.name }}
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="m4 2 4 4-4 4" /></svg>
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+  <div class="menu-room">
+    @if (activeRoom(); as room) {
+      <div class="menu-room-title">
+        <h2>{{ room.name }}</h2>
+        <a routerLink="/products" [queryParams]="{ category: room.name }" (click)="menu.hidePopover()">View all →</a>
       </div>
+      <ul>
+        @for (product of room.products; track product.sku) {
+          <li>
+            <a [routerLink]="['/products', product.sku]" (click)="menu.hidePopover()">
+              <strong>{{ product.name }}</strong>
+              {{ product.price | currency: 'EUR' }}
+            </a>
+          </li>
+        }
+      </ul>
     } @else {
-      <div class="d-flex align-items-center gap-2">
-        <a class="nav-link me-2" routerLink="/cart">Cart ({{ cart.count() }})</a>
-        <!-- Keycloak's own sign-up page. Everyone who registers becomes a customer (default role in the realm). -->
-        <button class="btn btn-outline-primary btn-sm" type="button" (click)="keycloak.register()">Register</button>
-        <button class="btn btn-primary btn-sm" type="button" (click)="keycloak.login()">Sign in</button>
+      <div class="menu-empty">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M6 40V26a6 6 0 0 1 12 0v4h12v-4a6 6 0 0 1 12 0v14Z" />
+          <path d="M12 20v-6a6 6 0 0 1 6-6h12a6 6 0 0 1 6 6v6M12 40v4M36 40v4" />
+        </svg>
+        <p>Point at a room to see what's in it</p>
+        <a routerLink="/products" (click)="menu.hidePopover()">Browse all furniture</a>
       </div>
     }
   </div>
-</nav>
+</div>
 
-<main class="container py-4">
+<div class="account-panel" id="account" popover>
+  @if (keycloak.authenticated) {
+    <p class="username">{{ keycloak.tokenParsed?.['preferred_username'] }}</p>
+    <button class="btn btn-outline-secondary" type="button" (click)="signOut()">Sign out</button>
+  } @else {
+    <button class="btn btn-primary" type="button" (click)="keycloak.login()">Sign in</button>
+    <!-- Keycloak's own sign-up page. Everyone who registers becomes a customer (default role in the realm). -->
+    <button class="btn btn-outline-secondary" type="button" (click)="keycloak.register()">Register</button>
+  }
+</div>
+
+<main class="px-3 px-md-4 py-4">
   <router-outlet />
 </main>
