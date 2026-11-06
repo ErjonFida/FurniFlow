@@ -42,6 +42,7 @@ describe('auth', () => {
     authenticated: true,
     token: 'access-token',
     updateToken: () => Promise.resolve(false),
+    isTokenExpired: () => false,
     hasRealmRole: (role: string) => roles.includes(role),
   });
 
@@ -56,6 +57,40 @@ describe('auth', () => {
     await Promise.resolve(); // updateToken() is async
     expect(server.expectOne('/api/orders/1').request.headers.get('Authorization')).toBe('Bearer access-token');
     expect(server.expectOne('https://cdn.example.com/sofa.jpg').request.headers.has('Authorization')).toBe(false);
+  });
+
+  describe('when the token cannot be refreshed', () => {
+    const refreshFails = (): Partial<Keycloak> => ({ ...signedIn([]), updateToken: () => Promise.reject(new Error('Keycloak is down')) });
+
+    async function tokenOnCall(keycloak: Partial<Keycloak>) {
+      setUp(keycloak);
+      TestBed.inject(HttpClient).get('/api/catalog/products').subscribe();
+      await Promise.resolve(); // updateToken() is async
+      return TestBed.inject(HttpTestingController).expectOne('/api/catalog/products').request.headers.get('Authorization');
+    }
+
+    it('still sends the call, with the token while it is valid', async () => {
+      expect(await tokenOnCall(refreshFails())).toBe('Bearer access-token');
+    });
+
+    it('leaves an expired token off, because the services would refuse it even on public pages', async () => {
+      expect(await tokenOnCall({ ...refreshFails(), isTokenExpired: () => true })).toBeNull();
+    });
+
+    it('leaves the token off when the session has ended', async () => {
+      const keycloak: Partial<Keycloak> = {
+        ...refreshFails(),
+        // As the real one does: it only answers for a signed-in user
+        isTokenExpired: () => {
+          throw new Error('Not authenticated');
+        },
+      };
+      keycloak.updateToken = () => {
+        keycloak.authenticated = false;
+        return Promise.reject(new Error('Session not active'));
+      };
+      expect(await tokenOnCall(keycloak)).toBeNull();
+    });
   });
 
   function guard(role: string) {

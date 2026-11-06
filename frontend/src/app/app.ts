@@ -16,8 +16,9 @@ import { Product, Room, roomsOf } from './products';
 })
 export class App {
   private readonly router = inject(Router);
-  // Signing in and out are full-page redirects to Keycloak, so this only changes while the page is open if Keycloak
-  // answered after the shop stopped waiting for it (see checkSignIn). The header catches up when it next redraws.
+  // Signing in and out are full-page redirects to Keycloak, and a session that ends reloads the page. So this only
+  // changes while the page is open if Keycloak answered after the shop stopped waiting for it (see checkSignIn). The
+  // header catches up when it next redraws.
   protected readonly keycloak = inject(Keycloak);
   protected readonly cart = inject(Cart);
 
