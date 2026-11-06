@@ -3,7 +3,28 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, provideRouter, RouterStateSnapshot, UrlTree } from '@angular/router';
 import Keycloak from 'keycloak-js';
-import { bearerToken, hasRole } from './auth';
+import { bearerToken, checkSignIn, hasRole } from './auth';
+
+describe('checkSignIn', () => {
+  const keycloak = (answer: Promise<boolean>) => ({ init: () => answer }) as unknown as Keycloak;
+
+  it('waits for Keycloak when it answers', async () => {
+    expect(await checkSignIn(keycloak(Promise.resolve(true)))).toBe(true);
+  });
+
+  it('starts the shop signed out when Keycloak fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await checkSignIn(keycloak(Promise.reject(new Error('Keycloak is down'))));
+
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
+
+  it("stops waiting for a Keycloak that never answers", async () => {
+    await checkSignIn(keycloak(new Promise(() => undefined)), 1); // would time the test out if it kept waiting
+  });
+});
 
 describe('auth', () => {
   function setUp(keycloak: Partial<Keycloak>) {
