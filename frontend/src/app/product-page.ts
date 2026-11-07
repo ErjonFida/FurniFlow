@@ -1,6 +1,6 @@
 import { CurrencyPipe, KeyValuePipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, linkedSignal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import Keycloak from 'keycloak-js';
@@ -72,11 +72,12 @@ export class ProductPage {
   private readonly stock = httpResource<{ available: number }>(() => `/api/inventory/stock/${encodeURIComponent(this.sku())}`);
   protected readonly available = computed(() => (this.stock.hasValue() ? this.stock.value().available : 0));
 
-  quantity = 1;
-  protected readonly added = signal(false);
+  // The router keeps this page when moving straight to another product, so these start afresh with each sku
+  protected readonly quantity = linkedSignal({ source: this.sku, computation: () => 1 });
+  protected readonly added = linkedSignal({ source: this.sku, computation: () => false });
 
   add() {
-    this.cart.add(this.sku(), this.quantity);
+    this.cart.add(this.sku(), this.quantity());
     this.added.set(true);
   }
 }
