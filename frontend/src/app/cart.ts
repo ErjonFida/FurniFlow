@@ -13,6 +13,13 @@ export class Cart {
 
   constructor() {
     effect(() => localStorage.setItem('cart', JSON.stringify(this.items())));
+    // Another tab changed the cart. Without this, the next change here would save over it. The effect above then saves
+    // the same value again, which browsers don't announce, so the tabs don't keep setting each other off.
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'cart') {
+        this.items.set(JSON.parse(event.newValue ?? '{}'));
+      }
+    });
   }
 
   add(sku: string, quantity: number) {
