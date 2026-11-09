@@ -13,6 +13,13 @@ export class Cart {
 
   constructor() {
     effect(() => localStorage.setItem('cart', JSON.stringify(this.items())));
+    // Another tab changed the cart. Without this, the next change here would save over it. The effect above then saves
+    // the same value again, which browsers don't announce, so the tabs don't keep setting each other off.
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'cart') {
+        this.items.set(JSON.parse(event.newValue ?? '{}'));
+      }
+    });
   }
 
   add(sku: string, quantity: number) {
@@ -91,9 +98,13 @@ export class CartPage {
     this.lines().reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0),
   );
   protected readonly message = signal('');
-  // One key per visit to this page. If the answer gets lost and the customer clicks again, the same key goes
-  // with it and order-service returns the order it already placed instead of reserving the units twice.
-  private readonly idempotencyKey = crypto.randomUUID();
+  // One key per cart. If the answer gets lost and the customer clicks again, the same key goes with it and
+  // order-service returns the order it already placed instead of reserving the units twice. A changed cart is another
+  // order, so it gets a new key: order-service refuses a key that comes back with other items.
+  private readonly idempotencyKey = computed(() => {
+    this.cart.items();
+    return crypto.randomUUID();
+  });
 
   // On change, not on every keystroke: clearing the field to type a new number mustn't count. Anything but a whole
   // number from 1 up (min and the default step decide) shows the cart's quantity again; Remove takes a line out.
@@ -107,7 +118,7 @@ export class CartPage {
 
   order() {
     const items = Object.entries(this.cart.items()).map(([sku, quantity]) => ({ sku, quantity }));
-    this.http.post('/api/orders', { items }, { headers: { 'Idempotency-Key': this.idempotencyKey } }).subscribe({
+    this.http.post('/api/orders', { items }, { headers: { 'Idempotency-Key': this.idempotencyKey() } }).subscribe({
       next: () => {
         this.cart.clear();
         this.router.navigate(['/orders']);

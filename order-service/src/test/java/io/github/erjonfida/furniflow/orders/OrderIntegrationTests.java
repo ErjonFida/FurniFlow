@@ -110,6 +110,10 @@ class OrderIntegrationTests {
 		mvc.perform(order("alice", key, cart))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.id").value(id));
+		// The same key with another cart: answering with the first order would quietly drop the change
+		mvc.perform(order("alice", key, line("SOFA-1", 2)))
+			.andExpect(status().isUnprocessableContent())
+			.andExpect(jsonPath("$.detail").value(containsString("other items")));
 		verify(inventory, times(1)).reserve("SOFA-1", 2);
 
 		// The name and prices the order was placed with, read back from the database, even after the catalog changes them
