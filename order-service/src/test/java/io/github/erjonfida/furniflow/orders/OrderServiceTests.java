@@ -15,12 +15,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.ErrorResponseException;
+import org.springframework.web.client.ResourceAccessException;
 
 import io.github.erjonfida.furniflow.orders.OrderService.Item;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -54,6 +56,8 @@ class OrderServiceTests {
 			.thenReturn(Optional.empty(), Optional.of(winner));
 		when(inventory.reserve("SOFA-1", 1)).thenReturn(new InventoryClient.Reservation(ours, Instant.now()));
 		when(orders.saveAndFlush(any())).thenThrow(DataIntegrityViolationException.class);
+		// The order exists, so the customer gets it even if inventory can't take the units back right now
+		doThrow(new ResourceAccessException("inventory is down")).when(inventory).release(ours);
 
 		assertThat(service.place("alice", "Alice", "key-1", List.of(new Item("SOFA-1", 1)))).isSameAs(winner);
 		verify(inventory).release(ours);
@@ -62,13 +66,19 @@ class OrderServiceTests {
 	@Test
 	void aLineThatCantBeReservedGivesTheEarlierLinesBack() {
 		UUID chairs = UUID.randomUUID();
+		UUID tables = UUID.randomUUID();
 		when(catalog.product(any())).thenReturn(new CatalogClient.Product("A product", BigDecimal.TEN));
 		when(inventory.reserve("CHAIR-1", 4)).thenReturn(new InventoryClient.Reservation(chairs, Instant.now()));
+		when(inventory.reserve("TABLE-1", 1)).thenReturn(new InventoryClient.Reservation(tables, Instant.now()));
 		when(inventory.reserve("SOFA-1", 1)).thenThrow(new ErrorResponseException(HttpStatus.CONFLICT));
+		doThrow(new ResourceAccessException("inventory is down")).when(inventory).release(chairs);
 
+		// Still "out of stock", not the failed release, and the tables go back although the chairs couldn't
 		assertThatThrownBy(() -> service.place("alice", "Alice", "key-1",
-				List.of(new Item("CHAIR-1", 4), new Item("SOFA-1", 1)))).isInstanceOf(ErrorResponseException.class);
-		verify(inventory).release(chairs);
+				List.of(new Item("CHAIR-1", 4), new Item("TABLE-1", 1), new Item("SOFA-1", 1))))
+			.isInstanceOfSatisfying(ErrorResponseException.class,
+					e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+		verify(inventory).release(tables);
 		verify(orders, never()).saveAndFlush(any());
 	}
 

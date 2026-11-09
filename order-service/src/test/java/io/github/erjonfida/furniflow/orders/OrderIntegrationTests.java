@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.ErrorResponseException;
+import org.springframework.web.client.ResourceAccessException;
 
 import io.github.erjonfida.furniflow.orders.OrderService.Item;
 
@@ -44,6 +45,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -171,6 +173,8 @@ class OrderIntegrationTests {
 				mvc.perform(place("alice", key, "SOFA-1", 1)).andReturn().getResponse().getContentAsString(), "$.id");
 
 		mvc.perform(post("/api/orders/{id}/cancel", id).with(as("bob", "customer"))).andExpect(status().isNotFound());
+		// Inventory can't take the units back right now: the order is cancelled anyway, and the hold runs out by itself
+		doThrow(new ResourceAccessException("inventory is down")).when(inventory).release(hold.id());
 		mvc.perform(post("/api/orders/{id}/cancel", id).with(as("alice", "customer")))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("CANCELLED"));
