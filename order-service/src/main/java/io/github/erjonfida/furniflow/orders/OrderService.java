@@ -11,9 +11,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class OrderService {
@@ -72,7 +74,7 @@ public class OrderService {
 	public Order place(String customerId, String customerName, String idempotencyKey, List<Item> items) {
 		Optional<Order> existing = orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey);
 		if (existing.isPresent()) {
-			return existing.get();
+			return sameItems(existing.get(), items);
 		}
 		List<Order.Line> lines = new ArrayList<>();
 		Instant reservedUntil = Instant.MAX;
@@ -102,8 +104,18 @@ public class OrderService {
 			// A concurrent retry with the same key saved its order first ((customer_id, idempotency_key) is UNIQUE).
 			// Give back the units we just reserved and answer with that order.
 			release(lines);
-			return orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey).orElseThrow();
+			return sameItems(orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey).orElseThrow(), items);
 		}
+	}
+
+	// A retry must send the same items. Other items under the same key are another order, and answering with the
+	// first one would quietly drop the change (422, as the IETF Idempotency-Key draft suggests).
+	private static Order sameItems(Order order, List<Item> items) {
+		if (!order.getLines().stream().map(line -> new Item(line.sku(), line.quantity())).toList().equals(items)) {
+			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+					"This Idempotency-Key was already used for an order with other items. Send a new key for a new order.");
+		}
+		return order;
 	}
 
 	@Transactional

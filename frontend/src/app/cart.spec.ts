@@ -38,7 +38,7 @@ describe('CartPage', () => {
     expect(cart.items()).toEqual({});
   });
 
-  it('orders the whole cart, again with the same Idempotency-Key, so a retry never places a second order', () => {
+  it('orders the whole cart, with the same Idempotency-Key until the cart changes, so a retry never places a second order', () => {
     cart.add('SOFA-1', 1);
     cart.add('CHAIR-1', 4);
     cart.add('SOFA-1', 1); // the same product twice is one line
@@ -54,6 +54,15 @@ describe('CartPage', () => {
     expect(first.request.body).toEqual({ items: [{ sku: 'SOFA-1', quantity: 2 }, { sku: 'CHAIR-1', quantity: 4 }] });
     expect(first.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
     expect(retry.request.headers.get('Idempotency-Key')).toBe(first.request.headers.get('Idempotency-Key'));
+
+    // Say the first order was saved but its answer got lost. A changed cart is a new order, so it needs its own key:
+    // with the old one, order-service would refuse it.
+    retry.flush(null, { status: 504, statusText: 'Gateway Timeout' });
+    cart.add('TABLE-1', 1);
+    fixture.componentInstance.order();
+    const changed = server.expectOne('/api/orders');
+    expect(changed.request.body.items).toContainEqual({ sku: 'TABLE-1', quantity: 1 });
+    expect(changed.request.headers.get('Idempotency-Key')).not.toBe(first.request.headers.get('Idempotency-Key'));
   });
 
   it('changes a quantity, and puts the old one back when the new one is not a whole number from 1 up', () => {
