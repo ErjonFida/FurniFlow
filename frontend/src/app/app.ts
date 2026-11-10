@@ -6,7 +6,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import Keycloak from 'keycloak-js';
 import { filter } from 'rxjs';
 import { Cart } from './cart';
-import { Product, Room, roomsOf } from './products';
+import { Product, Room, roomsOf, srcsetOf } from './products';
 
 @Component({
   imports: [CurrencyPipe, RouterLink, RouterOutlet],
@@ -27,6 +27,7 @@ export class App {
   private readonly products = httpResource<Product[]>(() => '/api/catalog/products');
   protected readonly rooms = computed(() => roomsOf(this.products.hasValue() ? this.products.value() : []));
   protected readonly activeRoom = signal<Room | null>(null); // the one the menu's right side shows
+  protected readonly srcsetOf = srcsetOf;
   private menuCloseTimer?: ReturnType<typeof setTimeout>;
 
   // The menu stays open while the mouse is on the button or on the menu. Touch has no hover, so it's left to taps.
@@ -61,8 +62,10 @@ export class App {
     return this.router.navigate(['/products'], { queryParams: { q: text.trim() || null } });
   }
 
-  // Back to the home page: the current one may need a role, and its guard would send the user straight to sign in
+  // Back to the home page: the current one may need a role, and its guard would send the user straight to sign in.
+  // The cart is kept in the browser, so it goes too, or the next person on this computer would find it.
   protected signOut() {
+    this.cart.clear();
     return this.keycloak.logout({ redirectUri: location.origin });
   }
 }

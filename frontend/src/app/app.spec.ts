@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import Keycloak from 'keycloak-js';
 import { App } from './app';
+import { Cart } from './cart';
 
 describe('App', () => {
   function render(keycloak: Partial<Keycloak>) {
@@ -34,6 +35,26 @@ describe('App', () => {
     expect(page.querySelector('a[href="/admin"]')).not.toBeNull();
     expect(page.querySelector('a[href="/orders"]')).toBeNull(); // admins don't shop
     expect(page.querySelector('a[href="/cart"]')).toBeNull();
+  });
+
+  it('empties the cart on sign-out, so the next person on this computer starts afresh', () => {
+    localStorage.clear();
+    let savedWhenLeaving: string | null = 'not signed out';
+    const page = render({
+      authenticated: true,
+      tokenParsed: { preferred_username: 'ada' },
+      hasRealmRole: (role: string) => role === 'customer',
+      // Keycloak takes the page away at once, so by then the browser must have forgotten the cart
+      logout: async () => void (savedWhenLeaving = localStorage.getItem('cart')),
+    }).nativeElement as HTMLElement;
+    const cart = TestBed.inject(Cart);
+    cart.add('SOFA-1', 2);
+    TestBed.tick(); // the cart saves itself
+    expect(localStorage.getItem('cart')).toContain('SOFA-1');
+
+    [...page.querySelectorAll('button')].find((button) => button.textContent?.includes('Sign out'))!.click();
+    expect(savedWhenLeaving).toBeNull();
+    expect(cart.count()).toBe(0);
   });
 
   describe('the Furniture menu', () => {

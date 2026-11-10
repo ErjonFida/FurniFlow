@@ -34,8 +34,10 @@ export class Cart {
     this.items.update((items) => Object.fromEntries(Object.entries(items).filter(([s]) => s !== sku)));
   }
 
+  // Saved at once, not when the effect gets to it: signing out leaves the page straight away
   clear() {
     this.items.set({});
+    localStorage.removeItem('cart');
   }
 }
 

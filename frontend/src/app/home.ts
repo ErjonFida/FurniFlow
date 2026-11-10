@@ -1,7 +1,7 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Product, ProductCard, roomsOf } from './products';
+import { Product, ProductCard, roomsOf, srcsetOf } from './products';
 
 // The shop's front page: a banner, some of the furniture, and a way into each room
 @Component({
@@ -37,7 +37,7 @@ import { Product, ProductCard, roomsOf } from './products';
           @for (room of rooms(); track room.name) {
             <a class="room-card" routerLink="/products" [queryParams]="{ category: room.name }">
               @if (room.imageUrl) {
-                <img [src]="room.imageUrl" alt="" loading="lazy" />
+                <img [src]="room.imageUrl" [attr.srcset]="srcsetOf(room.imageUrl)" sizes="auto, 50vw" alt="" loading="lazy" />
               }
               <span class="room-number">{{ ($index + 1).toString().padStart(2, '0') }}</span>
               <span class="room-name">{{ room.name }}</span>
@@ -54,4 +54,5 @@ import { Product, ProductCard, roomsOf } from './products';
 export class Home {
   protected readonly products = httpResource<Product[]>(() => '/api/catalog/products');
   protected readonly rooms = computed(() => roomsOf(this.products.hasValue() ? this.products.value() : []));
+  protected readonly srcsetOf = srcsetOf;
 }
