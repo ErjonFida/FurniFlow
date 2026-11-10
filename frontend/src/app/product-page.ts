@@ -39,14 +39,17 @@ import { Product } from './products';
         <div class="col-lg-3">
           <div class="buy-box">
             <p class="buy-box-price">{{ p.price | currency: 'EUR' }}</p>
-            <p>{{ available() ? available() + ' in stock' : 'Out of stock' }}</p>
+            @if (available() !== undefined) {
+              <p>{{ available() ? available() + ' in stock' : 'Out of stock' }}</p>
+            }
 
-            <!-- Signed out is fine: the cart is kept in the browser until checkout -->
-            @if (!keycloak.authenticated || keycloak.hasRealmRole('customer')) {
+            <!-- Signed out is fine: the cart is kept in the browser until checkout. So is unknown stock: checkout checks again -->
+            @if (available() !== 0 && (!keycloak.authenticated || keycloak.hasRealmRole('customer'))) {
               <form class="vstack gap-3" ngNativeValidate (ngSubmit)="add()">
                 <div>
                   <label class="form-label" for="quantity">Quantity</label>
-                  <input class="form-control" id="quantity" name="quantity" type="number" min="1" [(ngModel)]="quantity" required />
+                  <input class="form-control" id="quantity" name="quantity" type="number" min="1" [attr.max]="available()"
+                    [(ngModel)]="quantity" required />
                 </div>
                 <button class="btn btn-primary" type="submit">Add to cart</button>
               </form>
@@ -68,9 +71,15 @@ export class ProductPage {
 
   readonly sku = input.required<string>(); // from the URL
   protected readonly product = httpResource<Product>(() => `/api/catalog/products/${encodeURIComponent(this.sku())}`);
-  // Inventory answers 404 for a SKU that was never stocked
   private readonly stock = httpResource<{ available: number }>(() => `/api/inventory/stock/${encodeURIComponent(this.sku())}`);
-  protected readonly available = computed(() => (this.stock.hasValue() ? this.stock.value().available : 0));
+  protected readonly available = computed(() => {
+    if (this.stock.hasValue()) {
+      return this.stock.value().available;
+    }
+    // Inventory answers 404 for a SKU that was never stocked. Anything else (still loading, inventory down) is unknown,
+    // and "Out of stock" would be false then.
+    return this.stock.error() && this.stock.statusCode() === 404 ? 0 : undefined;
+  });
 
   // The router keeps this page when moving straight to another product, so these start afresh with each sku
   protected readonly quantity = linkedSignal({ source: this.sku, computation: () => 1 });

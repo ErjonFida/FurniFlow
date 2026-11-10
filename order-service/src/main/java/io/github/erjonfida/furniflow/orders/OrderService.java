@@ -10,6 +10,9 @@ import java.util.UUID;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class OrderService {
+
+	private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
 	static final String ORDER_PAID = "order-paid";
 
@@ -139,8 +144,8 @@ public class OrderService {
 
 	/**
 	 * Cancels an unpaid order and gives its units back. The cancellation is committed before inventory is called,
-	 * so units never go back on sale for an order that can still be paid. Safe to repeat: if inventory can't be
-	 * reached, cancelling again gives the units back, and otherwise the hold expires by itself.
+	 * so units never go back on sale for an order that can still be paid. If inventory can't take them back right now,
+	 * the order is still cancelled and its holds run out by themselves.
 	 */
 	public Order cancel(UUID id, String customerId) {
 		Order order = transactions.execute(tx -> {
@@ -156,8 +161,17 @@ public class OrderService {
 		return order;
 	}
 
+	// Best effort: a hold that isn't given back runs out by itself. Each line gets its own try, so one failure doesn't
+	// keep the others held, and the caller's own outcome (out of stock, the order that exists) is what the customer sees.
 	private void release(List<Order.Line> lines) {
-		lines.forEach(line -> inventory.release(line.reservationId()));
+		for (Order.Line line : lines) {
+			try {
+				inventory.release(line.reservationId());
+			}
+			catch (RuntimeException e) {
+				log.warn("Couldn't give back reservation {}; it runs out by itself", line.reservationId(), e);
+			}
+		}
 	}
 
 	private Order lock(UUID id, String customerId) {
