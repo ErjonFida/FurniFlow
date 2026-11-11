@@ -1,0 +1,5 @@
+{
+  "realm": "furniflow",
+  "auth-server-url": "https://PUBLIC_HOST/auth",
+  "resource": "furniflow-web"
+}
