@@ -13,6 +13,20 @@ export interface Product {
   imageUrl?: string | null;
 }
 
+// The catalog's photos are 1000px wide, for the product page. Unsplash resizes on request (?w=), so smaller places offer
+// the browser smaller copies, and with sizes="auto" it takes the one that fits the space the photo is drawn in. Any
+// other address (an admin can paste one) is used as it is.
+export const srcsetOf = (url: string) =>
+  url.startsWith('https://images.unsplash.com/')
+    ? [120, 400, 700, 1000]
+        .map((width) => {
+          const copy = new URL(url);
+          copy.searchParams.set('w', String(width));
+          return `${copy} ${width}w`;
+        })
+        .join(', ')
+    : null;
+
 export const categoriesOf = (products: Product[]) => [...new Set(products.map((p) => p.category))].sort();
 
 // Each room with its products, and the first photo the catalog has for it
@@ -37,8 +51,8 @@ export const matching = (products: Product[], category?: string, search = '') =>
   template: `
     <a class="product-card" [routerLink]="['/products', product().sku]">
       <!-- No alt text: the link already says the product's name -->
-      @if (product().imageUrl) {
-        <img class="product-photo" [src]="product().imageUrl" alt="" loading="lazy" />
+      @if (product().imageUrl; as url) {
+        <img class="product-photo" [src]="url" [attr.srcset]="srcsetOf(url)" sizes="auto, 20rem" alt="" loading="lazy" />
       } @else {
         <span class="product-photo" aria-hidden="true">{{ product().name[0] }}</span>
       }
@@ -51,6 +65,7 @@ export const matching = (products: Product[], category?: string, search = '') =>
 })
 export class ProductCard {
   readonly product = input.required<Product>();
+  protected readonly srcsetOf = srcsetOf;
 }
 
 // All the furniture, narrowed by room and search

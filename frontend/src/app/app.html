@@ -58,7 +58,7 @@
           <a routerLink="/products" [queryParams]="{ category: room.name }" [class.active]="room === activeRoom()"
             (mouseenter)="activeRoom.set(room)" (focus)="activeRoom.set(room)" (click)="menu.hidePopover()">
             @if (room.imageUrl) {
-              <img [src]="room.imageUrl" alt="" loading="lazy" />
+              <img [src]="room.imageUrl" [attr.srcset]="srcsetOf(room.imageUrl)" sizes="2.25rem" alt="" loading="lazy" />
             }
             {{ room.name }}
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="m4 2 4 4-4 4" /></svg>
