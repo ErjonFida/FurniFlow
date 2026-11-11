@@ -1,0 +1,68 @@
+# What a public server needs on top of the local cluster: one HTTPS entrance and a database for Keycloak.
+
+# k3s runs Traefik on ports 80 and 443. This adds to k3s's own settings for it: plain HTTP is sent on to HTTPS, and
+# certificates come from Let's Encrypt (TLS-ALPN challenge on 443), kept on a volume so restarts don't request new ones.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata: {name: traefik, namespace: kube-system}
+spec:
+  valuesContent: |-
+    ports:
+      web:
+        http:
+          redirections:
+            entryPoint: {to: websecure, scheme: https, permanent: true}
+    persistence:
+      enabled: true
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          tlsChallenge: true # not {}: the chart writes no argument for an empty map
+          storage: /data/acme.json
+---
+# The shop and Keycloak share one host and one certificate: Keycloak under /auth, everything else to the frontend,
+# whose nginx passes /api on to the gateway
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: furniflow
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+spec:
+  tls: [{hosts: [PUBLIC_HOST]}]
+  rules:
+    - host: PUBLIC_HOST
+      http:
+        paths:
+          - {path: /auth, pathType: Prefix, backend: {service: {name: keycloak, port: {number: 8180}}}}
+          - {path: /, pathType: Prefix, backend: {service: {name: frontend, port: {number: 80}}}}
+---
+# Keycloak's own database, so accounts and authenticator apps survive restarts
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: keycloak-db}
+spec:
+  serviceName: keycloak-db
+  selector: {matchLabels: {app: keycloak-db}}
+  template:
+    metadata: {labels: {app: keycloak-db}}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18
+          env:
+            - {name: POSTGRES_DB, value: keycloak}
+            - {name: POSTGRES_USER, value: furniflow}
+            - {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: furniflow, key: db-password}}}
+          ports: [{containerPort: 5432}]
+          volumeMounts: [{name: data, mountPath: /var/lib/postgresql}]
+          resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 128Mi}}
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: keycloak-db}
+spec: {selector: {app: keycloak-db}, ports: [{port: 5432}]}

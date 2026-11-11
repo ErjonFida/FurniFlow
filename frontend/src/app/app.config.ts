@@ -5,7 +5,9 @@ import Keycloak from 'keycloak-js';
 import { routes } from './app.routes';
 import { bearerToken, checkSignIn } from './auth';
 
-const keycloak = new Keycloak({ url: 'http://localhost:8180', realm: 'furniflow', clientId: 'furniflow-web' });
+// Where Keycloak is comes from public/keycloak.json (localhost:8180), read during init. A deploy swaps that file for
+// its own, so the same image signs in against any Keycloak.
+const keycloak = new Keycloak('/keycloak.json');
 
 export const appConfig: ApplicationConfig = {
   providers: [

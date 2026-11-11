@@ -32,6 +32,27 @@ docker build -t ghcr.io/erjonfida/furniflow/frontend frontend
 kubectl apply -k .                            # then http://localhost
 ```
 
+## Deploy to one server (AWS Lightsail)
+
+`k8s/lightsail` runs the same manifests on a 4 GB Ubuntu server with k3s, over HTTPS (Let's Encrypt), with Keycloak under `/auth`. It uses the images CI published from main.
+
+1. Get a name for the server, e.g. a free subdomain at [duckdns.org](https://www.duckdns.org).
+2. In Lightsail, create an Ubuntu 24.04 instance on the 4 GB plan and attach a static IP. On its Networking tab, allow HTTPS (443) next to HTTP and SSH. Point the name at the static IP.
+3. Connect with SSH and run, with your name in place of `yourname.duckdns.org`:
+
+```bash
+sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+curl -sfL https://get.k3s.io | sh -s - --disable metrics-server --write-kubeconfig-mode 644
+git clone https://github.com/ErjonFida/FurniFlow.git && cd FurniFlow
+# Random passwords, kept only in the cluster
+kubectl create secret generic furniflow $(for k in db-password order-service-client-secret keycloak-admin-password admin-password; do echo --from-literal=$k=$(openssl rand -hex 16); done)
+kubectl kustomize --load-restrictor LoadRestrictionsNone k8s/lightsail | sed "s/PUBLIC_HOST/yourname.duckdns.org/g" | kubectl apply -f -
+kubectl get pods -w                           # the first start takes several minutes
+```
+
+The shop is then at `https://yourname.duckdns.org`. The realm's admin password: `kubectl get secret furniflow -o jsonpath='{.data.admin-password}' | base64 -d`. To pick up newer images: `kubectl rollout restart deployment`.
+
 ## Test
 
 ```bash
@@ -52,6 +73,7 @@ cd frontend && npx ng test --watch=false
 | `compose.yaml` | Local databases, Kafka and Keycloak |
 | `Dockerfile` | Image for any Spring service (`--build-arg SERVICE=...`) |
 | `k8s/`, `kustomization.yaml` | Kubernetes: stand-ins for the databases, Kafka and Keycloak, then the services |
+| `k8s/lightsail/` | The same on one public server: HTTPS, Keycloak on its own database, memory sized for 4 GB |
 | `.github/workflows/ci.yml` | Backend and frontend CI; publishes the images from main |
 
 ## Roadmap

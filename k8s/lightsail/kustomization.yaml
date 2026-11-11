@@ -1,0 +1,14 @@
+# FurniFlow on one 4 GB server running k3s, such as an AWS Lightsail instance, over HTTPS. Steps in README.md.
+# PUBLIC_HOST stands for the server's name (yourname.duckdns.org):
+#   kubectl kustomize --load-restrictor LoadRestrictionsNone k8s/lightsail | sed "s/PUBLIC_HOST/yourname.duckdns.org/g" | kubectl apply -f -
+resources:
+  - ../infra.yaml
+  - ../apps.yaml
+  - lightsail.yaml # the HTTPS entrance and Keycloak's database
+patches:
+  - path: patches.yaml
+configMapGenerator:
+  - name: keycloak-realm # as in ../../kustomization.yaml
+    files: [../../keycloak/furniflow-realm.json]
+  - name: frontend-keycloak
+    files: [keycloak.json]

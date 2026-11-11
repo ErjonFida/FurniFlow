@@ -1,0 +1,5 @@
+{
+  "realm": "furniflow",
+  "auth-server-url": "http://localhost:8180",
+  "resource": "furniflow-web"
+}

@@ -82,18 +82,18 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:4200/*", "http://localhost/*"],
+      "redirectUris": ["http://localhost:4200/*", "http://localhost/*", "${FURNIFLOW_PUBLIC_URL:http://localhost}/*"],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:4200/*##http://localhost/*"
+        "post.logout.redirect.uris": "http://localhost:4200/*##http://localhost/*##${FURNIFLOW_PUBLIC_URL:http://localhost}/*"
       }
     },
     {
       "clientId": "order-service",
       "name": "order-service calling inventory-service",
       "publicClient": false,
-      "secret": "order-service-secret",
+      "secret": "${FURNIFLOW_ORDER_SERVICE_SECRET:order-service-secret}",
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true
@@ -117,7 +117,7 @@
       "email": "admin@furniflow.test",
       "emailVerified": true,
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "${FURNIFLOW_ADMIN_PASSWORD:admin}", "temporary": false }],
       "realmRoles": ["admin"]
     },
     {

@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: Secret
+metadata: {name: furniflow}
+$patch: delete # made on the server instead, so real passwords never enter Git
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: keycloak}
+spec:
+  template:
+    spec:
+      containers:
+        - name: keycloak
+          # Production mode keeps its data in keycloak-db; the realm is imported on the first start only
+          args: [start, --import-realm]
+          env:
+            - {name: KC_HOSTNAME, value: "https://PUBLIC_HOST/auth"}
+            - {name: KC_HTTP_RELATIVE_PATH, value: /auth}
+            - {name: KC_HTTP_ENABLED, value: "true"} # Traefik ends HTTPS and says so in X-Forwarded-Proto
+            - {name: KC_PROXY_HEADERS, value: xforwarded}
+            - {name: KC_DB, value: postgres}
+            - {name: KC_DB_URL, value: "jdbc:postgresql://keycloak-db:5432/keycloak"}
+            - {name: KC_DB_USERNAME, value: furniflow}
+            - {name: KC_DB_PASSWORD, valueFrom: {secretKeyRef: {name: furniflow, key: db-password}}}
+            - {name: KC_DB_POOL_MAX_SIZE, value: "5"}
+            - {name: KC_BOOTSTRAP_ADMIN_PASSWORD, value: null, valueFrom: {secretKeyRef: {name: furniflow, key: keycloak-admin-password}}}
+            - {name: JAVA_OPTS_KC_HEAP, value: "-XX:MaxRAMPercentage=45 -XX:InitialRAMPercentage=20"}
+            # Read by the ${...} placeholders in keycloak/furniflow-realm.json
+            - {name: FURNIFLOW_PUBLIC_URL, value: "https://PUBLIC_HOST"}
+            - {name: FURNIFLOW_ADMIN_PASSWORD, valueFrom: {secretKeyRef: {name: furniflow, key: admin-password}}}
+            - {name: FURNIFLOW_ORDER_SERVICE_SECRET, valueFrom: {secretKeyRef: {name: furniflow, key: order-service-client-secret}}}
+          resources: {requests: {cpu: 100m, memory: 768Mi}, limits: {memory: 768Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: keycloak}
+spec: {type: ClusterIP} # reached through the Ingress
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: frontend}
+spec:
+  template:
+    spec:
+      containers:
+        - name: frontend
+          # Points the shop at https://PUBLIC_HOST/auth instead of localhost:8180
+          volumeMounts: [{name: keycloak-json, mountPath: /usr/share/nginx/html/keycloak.json, subPath: keycloak.json}]
+      volumes: [{name: keycloak-json, configMap: {name: frontend-keycloak}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: frontend}
+spec: {type: ClusterIP} # reached through the Ingress
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: gateway}
+spec:
+  template:
+    spec:
+      containers:
+        - name: gateway
+          env: [{name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=50 -XX:TieredStopAtLevel=1"}]
+          resources: {requests: {memory: 384Mi}, limits: {memory: 384Mi}}
+          startupProbe: {failureThreshold: 150} # five minutes: everything starts at once on two small CPUs
+---
+# Tokens now name https://PUBLIC_HOST/auth/realms/furniflow as their issuer. Keys are still fetched in-cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: catalog-service}
+spec:
+  template:
+    spec:
+      containers:
+        - name: catalog-service
+          env:
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI, value: "https://PUBLIC_HOST/auth/realms/furniflow"}
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI, value: "http://keycloak:8180/auth/realms/furniflow/protocol/openid-connect/certs"}
+            - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=50 -XX:TieredStopAtLevel=1"}
+          resources: {requests: {memory: 384Mi}, limits: {memory: 384Mi}}
+          startupProbe: {failureThreshold: 150}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: inventory-service}
+spec:
+  template:
+    spec:
+      containers:
+        - name: inventory-service
+          env:
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI, value: "https://PUBLIC_HOST/auth/realms/furniflow"}
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI, value: "http://keycloak:8180/auth/realms/furniflow/protocol/openid-connect/certs"}
+            - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=50 -XX:TieredStopAtLevel=1"}
+          resources: {requests: {memory: 384Mi}, limits: {memory: 384Mi}}
+          startupProbe: {failureThreshold: 150}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: order-service}
+spec:
+  template:
+    spec:
+      containers:
+        - name: order-service
+          env:
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI, value: "https://PUBLIC_HOST/auth/realms/furniflow"}
+            - {name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI, value: "http://keycloak:8180/auth/realms/furniflow/protocol/openid-connect/certs"}
+            - {name: SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_TOKENURI, value: "http://keycloak:8180/auth/realms/furniflow/protocol/openid-connect/token"}
+            - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=50 -XX:TieredStopAtLevel=1"}
+          resources: {requests: {memory: 384Mi}, limits: {memory: 384Mi}}
+          startupProbe: {failureThreshold: 150}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: kafka}
+spec:
+  template:
+    spec:
+      containers:
+        - name: kafka
+          env:
+            - {name: KAFKA_HEAP_OPTS, value: "-Xmx160m -Xms160m"} # the image reserves 1 GB by default
+            # The log cleaner takes a 128 MB buffer at startup, which alone overflows that heap. It only compacts the
+            # consumer offsets here, so 16 MB is plenty.
+            - {name: KAFKA_LOG_CLEANER_DEDUPE_BUFFER_SIZE, value: "16777216"}
+          resources: {requests: {cpu: 50m, memory: 384Mi}, limits: {memory: 384Mi}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: catalog-db}
+spec:
+  template:
+    spec:
+      containers:
+        - name: mongo
+          args: [--wiredTigerCacheSizeGB, "0.25"] # the smallest cache it allows; the catalog is tiny
+          resources: {requests: {cpu: 50m, memory: 256Mi}, limits: {memory: 256Mi}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: inventory-db}
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres
+          resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 128Mi}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: order-db}
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres
+          resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 128Mi}}
