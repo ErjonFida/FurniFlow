@@ -1,7 +1,6 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Product, ProductCard, roomsOf, srcsetOf } from './products';
+import { catalogResource, ProductCard, roomsOf, srcsetOf } from './products';
 
 @Component({
   selector: 'app-home',
@@ -51,7 +50,7 @@ import { Product, ProductCard, roomsOf, srcsetOf } from './products';
   `,
 })
 export class Home {
-  protected readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  protected readonly products = catalogResource();
   protected readonly rooms = computed(() => roomsOf(this.products.hasValue() ? this.products.value() : []));
   protected readonly srcsetOf = srcsetOf;
 }

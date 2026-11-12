@@ -1,9 +1,9 @@
 import { CurrencyPipe } from '@angular/common';
-import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import Keycloak from 'keycloak-js';
-import { Product } from './products';
+import { catalogResource } from './products';
 
 // SKU → quantity. Kept in localStorage, so it survives a reload and signing in (a full page redirect to Keycloak).
 @Injectable({ providedIn: 'root' })
@@ -90,7 +90,7 @@ export class CartPage {
   protected readonly cart = inject(Cart);
 
   //loads the whole catalog to price a few lines; ask catalog-service for just these SKUs once it pages
-  private readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  private readonly products = catalogResource();
   protected readonly lines = computed(() => {
     const catalog = new Map(this.products.hasValue() ? this.products.value().map((p) => [p.sku, p] as const) : []);
     return Object.entries(this.cart.items()).map(([sku, quantity]) => ({ sku, quantity, product: catalog.get(sku) }));

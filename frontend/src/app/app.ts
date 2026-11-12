@@ -1,17 +1,15 @@
 import { CurrencyPipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import Keycloak from 'keycloak-js';
 import { filter } from 'rxjs';
 import { Cart } from './cart';
-import { Product, Room, roomsOf, srcsetOf } from './products';
+import { catalogResource, Room, roomsOf, srcsetOf } from './products';
 
 @Component({
   imports: [CurrencyPipe, RouterLink, RouterOutlet],
   selector: 'app-root',
-  styleUrl: './app.css',
   templateUrl: './app.html',
 })
 export class App {
@@ -23,7 +21,7 @@ export class App {
 
   // loads the whole catalog for the menu, and a product an admin just added shows after a reload; ask
   // catalog-service for just the menu's fields once it pages
-  private readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  private readonly products = catalogResource();
   protected readonly rooms = computed(() => roomsOf(this.products.hasValue() ? this.products.value() : []));
   protected readonly activeRoom = signal<Room | null>(null); // the one the menu's right side shows
   protected readonly srcsetOf = srcsetOf;

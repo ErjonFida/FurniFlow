@@ -6,7 +6,7 @@ import { RouterLink } from '@angular/router';
 import Keycloak from 'keycloak-js';
 import { switchMap } from 'rxjs';
 import { isHeld, Order } from './orders';
-import { Product } from './products';
+import { catalogResource, Product } from './products';
 
 // One "seats: 3" per line becomes { seats: '3' }
 export const parseAttributes = (text: string): Record<string, string> =>
@@ -143,7 +143,7 @@ export const parseAttributes = (text: string): Record<string, string> =>
 export class Admin {
   private readonly http = inject(HttpClient);
   private readonly keycloak = inject(Keycloak);
-  protected readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  protected readonly products = catalogResource();
   protected readonly stock = httpResource<{ sku: string; available: number }[]>(() => '/api/inventory/stock');
   protected readonly orders = httpResource<Order[]>(() => '/api/orders/all');
   protected readonly isHeld = isHeld;

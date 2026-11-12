@@ -13,6 +13,8 @@ export interface Product {
   imageUrl?: string | null;
 }
 
+export const catalogResource = () => httpResource<Product[]>(() => '/api/catalog/products');
+
 // Unsplash resizes on request (?w=), so small places offer the browser smaller copies of the 1000px photos, and
 // sizes="auto" lets it take the one that fits. Any other address (an admin can paste one) is used as it is.
 export const srcsetOf = (url: string) =>
@@ -111,7 +113,7 @@ export class Products {
   readonly q = input<string>();
 
   // filters in the browser, fine while the catalog comes in one response; query MongoDB once it pages
-  protected readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  protected readonly products = catalogResource();
   protected readonly all = computed(() => (this.products.hasValue() ? this.products.value() : []));
   protected readonly categories = computed(() => categoriesOf(this.all()));
   protected readonly matches = computed(() => matching(this.all(), this.category(), this.q()));
