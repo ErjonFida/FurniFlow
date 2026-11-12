@@ -53,6 +53,7 @@ class InventoryClientTests {
 	void serviceToken() {
 		ClientRegistration keycloak = ClientRegistration.withRegistrationId("inventory")
 			.clientId("order-service")
+			.clientSecret("secret")
 			.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
 			.tokenUri("http://keycloak/token")
 			.build();
@@ -76,6 +77,25 @@ class InventoryClientTests {
 
 		assertThat(inventory.reserve("SOFA-1", 2))
 			.isEqualTo(new InventoryClient.Reservation(id, Instant.parse("2026-10-27T10:15:00Z")));
+	}
+
+	@Test
+	void theTokenRequestGetsTheSameTimeouts() {
+		// Answered by the mock only if it goes through the RestClient.Builder that carries spring.http.clients
+		when(authorizedClients.loadAuthorizedClient("inventory", "anonymousUser")).thenReturn(null);
+		server.expect(requestTo("http://keycloak/token"))
+			.andExpect(method(HttpMethod.POST))
+			.andRespond(withSuccess("""
+					{"access_token": "fresh-token", "token_type": "Bearer", "expires_in": 300}
+					""", MediaType.APPLICATION_JSON));
+		server.expect(requestTo("http://inventory/api/inventory/reservations"))
+			.andExpect(header("Authorization", "Bearer fresh-token"))
+			.andRespond(withSuccess("""
+					{"id": "%s", "expiresAt": "2026-10-27T10:15:00Z"}
+					""".formatted(UUID.randomUUID()), MediaType.APPLICATION_JSON));
+
+		inventory.reserve("SOFA-1", 1);
+		server.verify();
 	}
 
 	@Test
