@@ -1,5 +1,4 @@
-/* Warm paper, slate and bark, Raleway with uppercase Karla labels. Bootstrap's own variables carry most of it, so its
-   tables and forms follow without any changes to the pages. */
+/* Bootstrap's own variables carry most of the theme, so its tables and forms follow without changes to the pages */
 :root {
   --slate: #3e414a;
   --bark: #716154;
@@ -101,19 +100,17 @@ dt,
 }
 
 .form-control,
-.form-control:focus,
-.form-select {
+.form-control:focus {
   border-color: var(--bark);
   background-color: #fff;
 }
 
-.form-control:focus,
-.form-select:focus {
+.form-control:focus {
   border-color: var(--slate);
   box-shadow: 0 0 0 0.125rem rgb(62 65 74 / 0.25);
 }
 
-/* The header. Sides of equal width keep the name in the middle. */
+/* Sides of equal width keep the name in the middle */
 .site-header {
   anchor-name: --header;
   position: sticky;
@@ -228,8 +225,7 @@ body:has(#products-menu:popover-open) .header-start svg {
   transform: rotate(180deg);
 }
 
-/* The header's menu: the rooms on the left, what's in the one you point at on the right.
-   A popover sits outside the page's layout, so it's placed against the header. Older browsers: the page's top. */
+/* A popover sits outside the page's layout, so it's placed against the header. Older browsers: the page's top. */
 .products-menu {
   position: fixed;
   position-anchor: --header;
@@ -412,7 +408,6 @@ body:has(#products-menu:popover-open) .header-start svg {
   box-shadow: 0 12px 24px rgb(62 65 74 / 0.15);
 }
 
-/* A popover with no open state must stay hidden, so only an open panel gets its layout */
 .account-panel:popover-open {
   display: grid;
   gap: 0.5rem;
@@ -481,7 +476,6 @@ body:has(#products-menu:popover-open) .header-start svg {
   white-space: nowrap;
 }
 
-/* The shop: the rooms on the left, the furniture on the right */
 .shop {
   display: grid;
   grid-template-columns: 15.75rem 1fr;
@@ -524,7 +518,6 @@ body:has(#products-menu:popover-open) .header-start svg {
   gap: 2rem 1rem;
 }
 
-/* The home page */
 .home-banner {
   position: relative;
   display: grid;
@@ -640,7 +633,6 @@ body:has(#products-menu:popover-open) .header-start svg {
   transform: scale(1.03);
 }
 
-/* Keeps the light words readable on a light photo */
 .room-card::after {
   content: '';
   position: absolute;
@@ -667,7 +659,6 @@ body:has(#products-menu:popover-open) .header-start svg {
   font-weight: 300;
 }
 
-/* The product page's box with the price and the Add to cart button */
 .buy-box {
   padding: 1.25rem;
   border: 1px solid var(--sand);

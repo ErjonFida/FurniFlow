@@ -29,8 +29,7 @@ public class Order {
 
 	public enum Status { RESERVED, PAID, CANCELLED }
 
-	// One product in the order, with the catalog's name and price when the order was placed. Inventory holds its units
-	// under reservationId.
+	// A product in the order, with the catalog's name and price as they were when it was placed
 	@Embeddable
 	public record Line(String sku, String productName, int quantity, BigDecimal unitPrice, UUID reservationId) {
 	}
@@ -94,7 +93,7 @@ public class Order {
 		return lines;
 	}
 
-	// Exact: BigDecimal, no rounding. Orders placed before prices were kept (V5) have no total.
+	// Orders placed before prices were kept (V5) have no total
 	public BigDecimal getTotal() {
 		if (lines.stream().anyMatch(line -> line.unitPrice() == null)) {
 			return null;

@@ -53,7 +53,7 @@ class InventoryController {
 		this.inventory = inventory;
 	}
 
-	// ponytail: every SKU in one response, like the catalog; add paging when it grows past a few hundred
+	// Every SKU in one response, like the catalog; add paging when it grows past a few hundred
 	@GetMapping("/stock")
 	List<StockView> allStock() {
 		return inventory.allStock().stream().map(StockView::of).toList();

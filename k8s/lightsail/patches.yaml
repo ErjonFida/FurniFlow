@@ -113,7 +113,7 @@ spec:
           startupProbe: {failureThreshold: 150}
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata: {name: kafka}
 spec:
   template:

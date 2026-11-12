@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
 
-//Fills the shop with demo products, so a new install has something to show. 
+//Fills the shop with demo products, so a new install has something to show.
 @Component
 class DemoProducts implements ApplicationRunner {
 

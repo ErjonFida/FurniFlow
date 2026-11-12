@@ -1,9 +1,9 @@
 import { CurrencyPipe } from '@angular/common';
-import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, Injectable, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import Keycloak from 'keycloak-js';
-import { Product } from './products';
+import { catalogResource } from './products';
 
 // SKU → quantity. Kept in localStorage, so it survives a reload and signing in (a full page redirect to Keycloak).
 @Injectable({ providedIn: 'root' })
@@ -41,8 +41,7 @@ export class Cart {
   }
 }
 
-// The cart and checkout. Names and prices come from the catalog. order-service only gets SKUs and quantities and
-// looks the prices up again itself, so the price an order keeps can't be made up in the browser.
+// order-service gets only SKUs and quantities and looks the prices up itself, so a price can't be made up here
 @Component({
   selector: 'app-cart-page',
   imports: [CurrencyPipe, RouterLink],
@@ -91,7 +90,7 @@ export class CartPage {
   protected readonly cart = inject(Cart);
 
   //loads the whole catalog to price a few lines; ask catalog-service for just these SKUs once it pages
-  private readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  private readonly products = catalogResource();
   protected readonly lines = computed(() => {
     const catalog = new Map(this.products.hasValue() ? this.products.value().map((p) => [p.sku, p] as const) : []);
     return Object.entries(this.cart.items()).map(([sku, quantity]) => ({ sku, quantity, product: catalog.get(sku) }));
@@ -100,9 +99,8 @@ export class CartPage {
     this.lines().reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0),
   );
   protected readonly message = signal('');
-  // One key per cart. If the answer gets lost and the customer clicks again, the same key goes with it and
-  // order-service returns the order it already placed instead of reserving the units twice. A changed cart is another
-  // order, so it gets a new key: order-service refuses a key that comes back with other items.
+  // One key per cart: if the answer gets lost and the customer clicks again, order-service returns the order it
+  // already placed. A changed cart is another order, so it gets a new key: a reused key with other items is refused.
   private readonly idempotencyKey = computed(() => {
     this.cart.items();
     return crypto.randomUUID();

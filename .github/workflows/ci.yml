@@ -34,7 +34,6 @@ jobs:
       - run: npx ng test --watch=false
       - run: npx ng build
 
-  # After main passes, publishes the images Kubernetes runs: ghcr.io/erjonfida/furniflow/<image>
   images:
     if: github.event_name == 'push'
     needs: [backend, frontend]

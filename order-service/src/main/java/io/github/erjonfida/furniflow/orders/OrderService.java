@@ -27,11 +27,9 @@ public class OrderService {
 
 	static final String ORDER_PAID = "order-paid";
 
-	/** The event inventory-service needs to confirm the reservations, one per line. */
 	record OrderPaid(UUID orderId, List<UUID> reservationIds) {
 	}
 
-	/** One product the customer wants, and how many. */
 	record Item(@NotBlank String sku, @Positive int quantity) {
 	}
 
@@ -71,11 +69,8 @@ public class OrderService {
 		return orders.findAllByOrderByReservedUntilDesc();
 	}
 
-	/**
-	 * Places one order per idempotency key, however often the client retries. Not @Transactional on purpose: no
-	 * database connection is held while we wait for the catalog or inventory. If this fails after inventory reserved
-	 * the units, that reservation simply expires.
-	 */
+	// Not @Transactional on purpose: no database connection is held while we wait for the catalog or inventory.
+	// If this fails after inventory reserved the units, that reservation simply expires.
 	public Order place(String customerId, String customerName, String idempotencyKey, List<Item> items) {
 		Optional<Order> existing = orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey);
 		if (existing.isPresent()) {
@@ -84,7 +79,7 @@ public class OrderService {
 		List<Order.Line> lines = new ArrayList<>();
 		Instant reservedUntil = Instant.MAX;
 		try {
-			// ponytail: a catalog and an inventory call per line, fine for carts of a few products (the controller caps
+			// A catalog and an inventory call per line, fine for carts of a few products (the controller caps
 			// them); add batch endpoints to both if carts get big
 			for (Item item : items) {
 				// From the catalog, never from the client: the request only says what and how many
@@ -97,8 +92,7 @@ public class OrderService {
 			}
 		}
 		catch (RuntimeException failed) {
-			// Say the second product is out of stock: give back what the lines before it reserved, so nothing is held
-			// for an order that doesn't exist
+			// Give back what the earlier lines reserved, so nothing is held for an order that doesn't exist
 			release(lines);
 			throw failed;
 		}
@@ -106,15 +100,13 @@ public class OrderService {
 			return orders.saveAndFlush(new Order(customerId, customerName, idempotencyKey, lines, reservedUntil));
 		}
 		catch (DataIntegrityViolationException sameKey) {
-			// A concurrent retry with the same key saved its order first ((customer_id, idempotency_key) is UNIQUE).
-			// Give back the units we just reserved and answer with that order.
+			// A concurrent retry with the same key saved its order first ((customer_id, idempotency_key) is UNIQUE)
 			release(lines);
 			return sameItems(orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey).orElseThrow(), items);
 		}
 	}
 
-	// A retry must send the same items. Other items under the same key are another order, and answering with the
-	// first one would quietly drop the change (422, as the IETF Idempotency-Key draft suggests).
+	// Other items under a used key are another order: refuse it (422, as the IETF Idempotency-Key draft suggests)
 	private static Order sameItems(Order order, List<Item> items) {
 		if (!order.getLines().stream().map(line -> new Item(line.sku(), line.quantity())).toList().equals(items)) {
 			throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
@@ -130,7 +122,6 @@ public class OrderService {
 			return order; // payment providers retry their callbacks
 		}
 		if (order.getStatus() == Order.Status.CANCELLED) {
-			// Its units are already back on sale
 			throw new IllegalStateException("This order was cancelled. Place it again.");
 		}
 		if (order.getReservedUntil().isBefore(Instant.now())) {
@@ -142,16 +133,13 @@ public class OrderService {
 		return order;
 	}
 
-	/**
-	 * Cancels an unpaid order and gives its units back. The cancellation is committed before inventory is called,
-	 * so units never go back on sale for an order that can still be paid. If inventory can't take them back right now,
-	 * the order is still cancelled and its holds run out by themselves.
-	 */
+	// The cancellation is committed before inventory is called, so units never go back on sale for an order that can
+	// still be paid. If inventory can't take them back right now, the holds run out by themselves.
 	public Order cancel(UUID id, String customerId) {
 		Order order = transactions.execute(tx -> {
 			Order locked = lock(id, customerId);
 			if (locked.getStatus() == Order.Status.PAID) {
-				// ponytail: no refunds; add them together with a real payment provider
+				// No refunds; add them together with a real payment provider
 				throw new IllegalStateException("This order is paid and can't be cancelled.");
 			}
 			locked.markCancelled();

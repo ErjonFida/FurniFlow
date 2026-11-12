@@ -7,7 +7,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
-// Requests carry a Keycloak access token; roles come from it (see spring.security in application.yml)
+// Roles come from the token (see spring.security in application.yml)
 @Configuration
 class SecurityConfig {
 
@@ -15,7 +15,7 @@ class SecurityConfig {
 	SecurityFilterChain api(HttpSecurity http) throws Exception {
 		return http
 			.authorizeHttpRequests(requests -> requests
-				.requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll() // anyone may browse the shop
+				.requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
 				.requestMatchers("/actuator/health/**").permitAll() // Kubernetes probes; shows only UP or DOWN
 				.requestMatchers("/api/catalog/**").hasRole("admin")
 				.anyRequest().authenticated())

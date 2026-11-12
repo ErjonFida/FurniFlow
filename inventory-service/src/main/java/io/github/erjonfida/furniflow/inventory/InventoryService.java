@@ -64,7 +64,7 @@ public class InventoryService {
 		}
 	}
 
-	/** The order was paid: the units are sold and can no longer expire or be released. Safe to repeat. */
+	// The order was paid, so the units are sold. Safe to repeat.
 	@Transactional
 	public void confirm(UUID id) {
 		if (reservations.transition(id, ACTIVE, CONFIRMED) == 1) {
@@ -76,7 +76,7 @@ public class InventoryService {
 		if (reservations.transition(id, EXPIRED, CONFIRMED) == 1
 				&& stock.take(reservation.getSku(), reservation.getQuantity()) == 0) {
 			// Sold to someone else meanwhile. Throwing rolls the status change back.
-			// ponytail: after Kafka's retries this is only logged; add a dead-letter topic and a refund flow if it happens
+			// This is logged and not retried; add a dead-letter topic and a refund flow if it happens
 			throw new InsufficientStockException(reservation.getSku(), reservation.getQuantity());
 		}
 	}

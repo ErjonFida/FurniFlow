@@ -7,6 +7,12 @@ resources:
   - lightsail.yaml # the HTTPS entrance and Keycloak's database
 patches:
   - path: patches.yaml
+  # The server has no memory for a second pod during an update, so the old one stops before the new one starts
+  - target: {kind: Deployment}
+    patch: |-
+      - op: add
+        path: /spec/strategy
+        value: {type: Recreate, rollingUpdate: null} # null clears what a server deployed before this still holds
 configMapGenerator:
   - name: keycloak-realm # as in ../../kustomization.yaml
     files: [../../keycloak/furniflow-realm.json]

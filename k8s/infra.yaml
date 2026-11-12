@@ -1,10 +1,8 @@
-# Databases, Kafka and Keycloak for a local cluster. In the cloud these would be managed services.
 apiVersion: v1
 kind: Secret
 metadata: {name: furniflow}
 stringData:
-  # Local-only values, the same as in compose.yaml and keycloak/furniflow-realm.json.
-  # A real cluster gets this Secret from outside Git (kubectl create secret, or the cloud's secret store).
+  # Local-only values, as in compose.yaml and the realm file. A real cluster gets this Secret from outside Git.
   db-password: furniflow
   order-service-client-secret: order-service-secret
 ---
@@ -26,7 +24,6 @@ spec:
             - {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: furniflow, key: db-password}}}
           ports: [{containerPort: 5432}]
           volumeMounts: [{name: data, mountPath: /var/lib/postgresql}]
-  # Each database keeps its own disk, which survives pod restarts and redeploys
   volumeClaimTemplates:
     - metadata: {name: data}
       spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}
@@ -87,9 +84,10 @@ metadata: {name: catalog-db}
 spec: {selector: {app: catalog-db}, ports: [{port: 27017}]}
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata: {name: kafka}
 spec:
+  serviceName: kafka
   selector: {matchLabels: {app: kafka}}
   template:
     metadata: {labels: {app: kafka}}
@@ -111,7 +109,13 @@ spec:
             - {name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR, value: "1"}
             - {name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR, value: "1"}
             - {name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR, value: "1"}
+            - {name: KAFKA_LOG_DIRS, value: /var/lib/kafka/data/logs}
           ports: [{containerPort: 9092}]
+          # Exactly the image's own VOLUME path; mounted any higher, that throwaway volume hides this one
+          volumeMounts: [{name: data, mountPath: /var/lib/kafka/data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}
 ---
 apiVersion: v1
 kind: Service

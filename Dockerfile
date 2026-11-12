@@ -1,5 +1,3 @@
-# Image for one of the Spring services:
-#   docker build --build-arg SERVICE=order-service -t ghcr.io/erjonfida/furniflow/order-service .
 FROM eclipse-temurin:25-jdk AS build
 ARG SERVICE
 WORKDIR /src

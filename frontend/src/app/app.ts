@@ -1,30 +1,27 @@
 import { CurrencyPipe } from '@angular/common';
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import Keycloak from 'keycloak-js';
 import { filter } from 'rxjs';
 import { Cart } from './cart';
-import { Product, Room, roomsOf, srcsetOf } from './products';
+import { catalogResource, Room, roomsOf, srcsetOf } from './products';
 
 @Component({
   imports: [CurrencyPipe, RouterLink, RouterOutlet],
   selector: 'app-root',
-  styleUrl: './app.css',
   templateUrl: './app.html',
 })
 export class App {
   private readonly router = inject(Router);
-  // Signing in and out are full-page redirects to Keycloak, and a session that ends reloads the page. So this only
-  // changes while the page is open if Keycloak answered after the shop stopped waiting for it (see checkSignIn). The
-  // header catches up when it next redraws.
+  // Not a signal: signing in or out reloads the page, so this only changes mid-page if Keycloak answers after the
+  // shop stopped waiting (see checkSignIn). The header catches up when it next redraws.
   protected readonly keycloak = inject(Keycloak);
   protected readonly cart = inject(Cart);
 
   // loads the whole catalog for the menu, and a product an admin just added shows after a reload; ask
   // catalog-service for just the menu's fields once it pages
-  private readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  private readonly products = catalogResource();
   protected readonly rooms = computed(() => roomsOf(this.products.hasValue() ? this.products.value() : []));
   protected readonly activeRoom = signal<Room | null>(null); // the one the menu's right side shows
   protected readonly srcsetOf = srcsetOf;

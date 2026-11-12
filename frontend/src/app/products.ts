@@ -13,9 +13,10 @@ export interface Product {
   imageUrl?: string | null;
 }
 
-// The catalog's photos are 1000px wide, for the product page. Unsplash resizes on request (?w=), so smaller places offer
-// the browser smaller copies, and with sizes="auto" it takes the one that fits the space the photo is drawn in. Any
-// other address (an admin can paste one) is used as it is.
+export const catalogResource = () => httpResource<Product[]>(() => '/api/catalog/products');
+
+// Unsplash resizes on request (?w=), so small places offer the browser smaller copies of the 1000px photos, and
+// sizes="auto" lets it take the one that fits. Any other address (an admin can paste one) is used as it is.
 export const srcsetOf = (url: string) =>
   url.startsWith('https://images.unsplash.com/')
     ? [120, 400, 700, 1000]
@@ -29,7 +30,6 @@ export const srcsetOf = (url: string) =>
 
 export const categoriesOf = (products: Product[]) => [...new Set(products.map((p) => p.category))].sort();
 
-// Each room with its products, and the first photo the catalog has for it
 export const roomsOf = (products: Product[]) =>
   categoriesOf(products).map((name) => {
     const inRoom = products.filter((p) => p.category === name);
@@ -38,13 +38,11 @@ export const roomsOf = (products: Product[]) =>
 
 export type Room = ReturnType<typeof roomsOf>[number];
 
-// No category or search means all of them. Spaces around the search and upper or lower case don't matter.
 export const matching = (products: Product[], category?: string, search = '') =>
   products.filter(
     (p) => (!category || p.category === category) && p.name.toLowerCase().includes(search.trim().toLowerCase()),
   );
 
-// A product's photo, name and price, on the home page and in the shop
 @Component({
   selector: 'app-product-card',
   imports: [CurrencyPipe, RouterLink],
@@ -68,7 +66,6 @@ export class ProductCard {
   protected readonly srcsetOf = srcsetOf;
 }
 
-// All the furniture, narrowed by room and search
 @Component({
   selector: 'app-products',
   imports: [ProductCard, RouterLink],
@@ -116,7 +113,7 @@ export class Products {
   readonly q = input<string>();
 
   // filters in the browser, fine while the catalog comes in one response; query MongoDB once it pages
-  protected readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+  protected readonly products = catalogResource();
   protected readonly all = computed(() => (this.products.hasValue() ? this.products.value() : []));
   protected readonly categories = computed(() => categoriesOf(this.all()));
   protected readonly matches = computed(() => matching(this.all(), this.category(), this.q()));

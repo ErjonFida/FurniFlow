@@ -26,13 +26,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * The overselling experiment: {@value #BUYERS} buyers hit one SKU with {@value #STOCK} units at the same moment,
- * each trying to take one unit. Four ways of taking stock, same database, same connection pool (HikariCP, 10).
- * <p>
- * Not part of {@code ./mvnw verify} (Surefire only runs *Test and *Tests classes). Run it with:
- * {@code ./mvnw -pl inventory-service test -Dtest=ReservationBenchmark}
- */
+// The overselling experiment: BUYERS buyers hit one SKU with STOCK units at the same moment, each taking one unit.
+// Not part of ./mvnw verify (Surefire only runs *Test and *Tests classes). Run it with:
+//   ./mvnw -pl inventory-service test -Dtest=ReservationBenchmark
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(TestcontainersConfiguration.class)
 class ReservationBenchmark {
@@ -89,7 +85,7 @@ class ReservationBenchmark {
 		});
 	}
 
-	// Check and write in one statement, inside the database. The same SQL as StockRepository.take. 
+	// Check and write in one statement, inside the database. The same SQL as StockRepository.take.
 	boolean conditionalUpdate(String sku) {
 		return jdbc.update("UPDATE stock SET available = available - 1 WHERE sku = ? AND available >= 1", sku) == 1;
 	}
@@ -118,7 +114,6 @@ class ReservationBenchmark {
 			for (int i = 0; i < ROUNDS; i++) {
 				rounds.add(round(strategy.getValue()));
 			}
-			// Medians over the rounds
 			table.append(String.format(Locale.ROOT, "| %s | %.0f | %.0f | %.1f | %.0f |%n", strategy.getKey(),
 					median(rounds, Round::oversold), median(rounds, Round::throughput),
 					median(rounds, Round::p95Millis), median(rounds, Round::retries)));

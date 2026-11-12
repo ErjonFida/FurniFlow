@@ -58,7 +58,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Real PostgreSQL and Kafka in Docker (Testcontainers); catalog- and inventory-service are replaced by mocks. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -85,7 +84,6 @@ class OrderIntegrationTests {
 	// The tests share one database, so each test (a new instance) gets its own key
 	final String key = UUID.randomUUID().toString();
 
-	// Every product is in the catalog unless a test says otherwise
 	@BeforeEach
 	void catalogKnowsEveryProduct() {
 		when(catalog.product(any())).thenReturn(new CatalogClient.Product("A product", BigDecimal.TEN));
@@ -234,7 +232,6 @@ class OrderIntegrationTests {
 			.andExpect(status().isNotFound());
 	}
 
-	/** Reads the order-paid topic until the event for this order shows up, and returns its JSON. */
 	private String paidEventFor(String orderId) {
 		Properties fromTheStart = new Properties();
 		fromTheStart.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
@@ -257,8 +254,7 @@ class OrderIntegrationTests {
 			.count();
 	}
 
-	// Signed in as this user with this Keycloak realm role. Its authorities come from the app's own converter
-	// (application.yml), so a broken role mapping fails these tests too. Only the token's signature isn't checked.
+	// Authorities come from the app's own converter (application.yml), so a broken role mapping fails these tests too.
 	// As in Keycloak, the subject is the user's ID and the username is a separate claim.
 	private RequestPostProcessor as(String user, String role) {
 		return jwt()
@@ -272,7 +268,6 @@ class OrderIntegrationTests {
 		return order(customer, key, line(sku, quantity));
 	}
 
-	// A cart of these lines (see line)
 	private MockHttpServletRequestBuilder order(String customer, String key, String... lines) {
 		return post("/api/orders").with(as(customer, "customer"))
 			.header("Idempotency-Key", key)

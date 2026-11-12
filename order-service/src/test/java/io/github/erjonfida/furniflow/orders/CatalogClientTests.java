@@ -17,7 +17,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-/** The HTTP contract with catalog-service, against a fake server. */
 @RestClientTest(components = CatalogClient.class, properties = "furniflow.catalog-url=http://catalog")
 class CatalogClientTests {
 
