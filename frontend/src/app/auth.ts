@@ -11,13 +11,15 @@ export const checkSignIn = (keycloak: Keycloak, waitMs = 3000) => {
   // The session ended (it lapsed, or the user signed out in another tab). Pages only read the signed-in state when
   // they draw, so start over.
   keycloak.onAuthLogout = () => location.reload();
-  return Promise.race([
-    keycloak
-      .init({ onLoad: 'check-sso', silentCheckSsoRedirectUri: `${location.origin}/silent-check-sso.html` })
-      .catch((error) => console.warn('Keycloak is unavailable, so the shop starts signed out', error)),
-    new Promise((resolve) => setTimeout(resolve, waitMs)),
-  ]);
+  signInChecked = keycloak
+    .init({ onLoad: 'check-sso', silentCheckSsoRedirectUri: `${location.origin}/silent-check-sso.html` })
+    .catch((error) => console.warn('Keycloak is unavailable, so the shop starts signed out', error));
+  return Promise.race([signInChecked, delay(waitMs)]);
 };
+
+let signInChecked: Promise<unknown> = Promise.resolve();
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Adds the access token to our own API calls only, so it never leaks to another host, refreshing it first if it
 // expires within 30 seconds. If that fails the call still goes out, without the expired token: browsing needs no
@@ -41,11 +43,14 @@ export const bearerToken: HttpInterceptorFn = (request, next) => {
 
 // Only decides what the UI shows: the services check the token's roles again on every request.
 export function hasRole(role: string): CanActivateFn {
-  return (_route, state) => {
+  return async (_route, state) => {
     const keycloak = inject(Keycloak);
+    const router = inject(Router);
+    // Right after signing in, Keycloak may still be finishing it; deciding sooner would send the user to sign in again
+    await Promise.race([signInChecked, delay(10_000)]);
     if (!keycloak.authenticated) {
       return keycloak.login({ redirectUri: location.origin + state.url }).then(() => false);
     }
-    return keycloak.hasRealmRole(role) || inject(Router).parseUrl('/');
+    return keycloak.hasRealmRole(role) || router.parseUrl('/');
   };
 }
