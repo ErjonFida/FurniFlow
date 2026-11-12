@@ -3,7 +3,6 @@ import { Component, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Product, ProductCard, roomsOf, srcsetOf } from './products';
 
-// The shop's front page: a banner, some of the furniture, and a way into each room
 @Component({
   selector: 'app-home',
   imports: [ProductCard, RouterLink],

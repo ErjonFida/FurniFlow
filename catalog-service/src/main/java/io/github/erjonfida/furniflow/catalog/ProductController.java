@@ -53,15 +53,13 @@ class ProductController {
 		return products.findById(sku).orElseThrow(() -> new NoSuchElementException("Unknown product " + sku));
 	}
 
-	// Creates the product or replaces it. Its stock is kept by inventory-service.
 	@PutMapping("/{sku}")
 	Product save(@PathVariable String sku, @Valid @RequestBody ProductRequest request) {
 		return products.save(new Product(sku, request.name(), request.category(), request.price(),
 				request.description(), Objects.requireNonNullElse(request.attributes(), Map.of()), request.imageUrl()));
 	}
 
-	// Takes it out of the shop. Its stock only refers to the SKU and past orders keep their own copy of the name and
-	// price, so they stay.
+	// Stock and past orders stay: they refer to the SKU, and orders keep their own copy of the name and price
 	@DeleteMapping("/{sku}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	void delete(@PathVariable String sku) {

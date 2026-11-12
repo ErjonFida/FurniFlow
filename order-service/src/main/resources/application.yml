@@ -25,11 +25,9 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8180/realms/furniflow
-          # Same role mapping as inventory-service: realm role customer becomes ROLE_customer
           authorities-claim-expressions: "['realm_access']['roles']"
           authority-prefix: ROLE_
       client:
-        # order-service's own identity for calling inventory-service (client credentials grant)
         registration:
           inventory:
             provider: keycloak

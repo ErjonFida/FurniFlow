@@ -7,7 +7,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
-// Requests carry a Keycloak access token; roles come from it (see spring.security in application.yml)
+// Roles come from the token (see spring.security in application.yml)
 @Configuration
 class SecurityConfig {
 
@@ -21,7 +21,7 @@ class SecurityConfig {
 				.requestMatchers("/actuator/health/**").permitAll() // Kubernetes probes; shows only UP or DOWN
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(server -> server.jwt(Customizer.withDefaults()))
-			// CSRF abuses cookies the browser sends by itself. A bearer token is only sent when our code adds it.
+			// Bearer tokens only, no cookies, so there is nothing for CSRF to abuse
 			.csrf(csrf -> csrf.disable())
 			.build();
 	}

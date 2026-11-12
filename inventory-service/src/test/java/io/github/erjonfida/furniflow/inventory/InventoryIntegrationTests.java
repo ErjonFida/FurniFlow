@@ -34,7 +34,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-//Runs against a real PostgreSQL and Kafka in Docker (Testcontainers), with the Flyway schema applied
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -80,7 +79,6 @@ class InventoryIntegrationTests {
 
 		mvc.perform(get("/api/inventory/stock/{sku}", sku)).andExpect(status().isOk()); // anyone may look
 		mvc.perform(get("/actuator/health")).andExpect(status().isOk()); // so may Kubernetes
-		// The whole stock list is for the admin page only
 		mvc.perform(get("/api/inventory/stock").with(as("customer"))).andExpect(status().isForbidden());
 		mvc.perform(get("/api/inventory/stock").with(as("admin")))
 			.andExpect(jsonPath("$[?(@.sku == '%s')].available", sku).value(5));
@@ -161,8 +159,7 @@ class InventoryIntegrationTests {
 		return jdbc.queryForObject("SELECT status FROM reservation WHERE id = ?", String.class, id);
 	}
 
-	// Signed in with this Keycloak realm role. Its authorities come from the app's own converter (application.yml),
-	// so a broken role mapping fails these tests too. Only the token's signature isn't checked.
+	// Authorities come from the app's own converter (application.yml), so a broken role mapping fails these tests too
 	private RequestPostProcessor as(String role) {
 		return jwt().jwt(token -> token.claim("realm_access", Map.of("roles", List.of(role))))
 			.authorities(token -> tokens.convert(token).getAuthorities());

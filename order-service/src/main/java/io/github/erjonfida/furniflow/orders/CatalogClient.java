@@ -9,7 +9,7 @@ import org.springframework.web.client.RestClient;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
-/** Reads products from catalog-service. Browsing the catalog needs no token. */
+// Browsing the catalog needs no token
 @Component
 class CatalogClient {
 

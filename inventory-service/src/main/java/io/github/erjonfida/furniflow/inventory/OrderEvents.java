@@ -8,11 +8,10 @@ import tools.jackson.databind.json.JsonMapper;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-/** Events from order-service. The JSON is the contract between the services; this record is inventory's own copy. */
+// The JSON is the contract with order-service; this record is inventory's own copy
 @Component
 class OrderEvents {
 
-	// One reservation per line of the order
 	record OrderPaid(UUID orderId, List<UUID> reservationIds) {
 	}
 

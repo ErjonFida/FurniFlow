@@ -5,12 +5,11 @@ import Keycloak from 'keycloak-js';
 import { catchError, from, of, switchMap } from 'rxjs';
 
 // Before the first render: finish a sign-in redirect, or pick up an existing Keycloak session in a hidden iframe.
-// Tokens stay in memory, never in localStorage. Authorization code flow with PKCE (keycloak-js default).
-// Browsing the shop needs no sign-in, so if Keycloak fails or is slow the shop starts signed out. An answer that comes
-// after the wait still signs the user in. It can't be left to init() alone: it has no time limit on the hidden iframe.
+// Browsing needs no sign-in, so the shop starts signed out if Keycloak fails or is slow (init() alone has no time
+// limit on the iframe). An answer that comes after the wait still signs the user in.
 export const checkSignIn = (keycloak: Keycloak, waitMs = 3000) => {
   // The session ended (it lapsed, or the user signed out in another tab). Pages only read the signed-in state when
-  // they draw, so start over: public pages then show as signed out, and pages that need a role go to sign-in.
+  // they draw, so start over.
   keycloak.onAuthLogout = () => location.reload();
   return Promise.race([
     keycloak
@@ -20,10 +19,9 @@ export const checkSignIn = (keycloak: Keycloak, waitMs = 3000) => {
   ]);
 };
 
-// Adds the user's access token to our own API calls only, so it never leaks to another host.
-// The token is refreshed first if it expires within 30 seconds. If that fails (Keycloak is down, say) the call still
-// goes out, because browsing needs no sign-in. An expired token stays off it: the services answer 401 to one even on
-// public pages. A page that needs a sign-in gets its 401 from the service.
+// Adds the access token to our own API calls only, so it never leaks to another host, refreshing it first if it
+// expires within 30 seconds. If that fails the call still goes out, without the expired token: browsing needs no
+// sign-in, and the services answer 401 to an expired token even on public pages.
 export const bearerToken: HttpInterceptorFn = (request, next) => {
   const keycloak = inject(Keycloak);
   if (!keycloak.authenticated || !request.url.startsWith('/api/')) {

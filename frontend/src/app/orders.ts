@@ -6,17 +6,16 @@ import { RouterLink } from '@angular/router';
 export interface Order {
   id: string;
   customer: string;
-  // Names and prices as they were when the order was placed. Orders from before those were kept have none (null).
+  // Orders from before names and prices were kept have none (null)
   items: { sku: string; name: string | null; quantity: number; unitPrice: number | null }[];
   total: number | null;
   status: 'RESERVED' | 'PAID' | 'CANCELLED';
   reservedUntil: string;
 }
 
-// Unpaid and not yet expired: its units are still set aside
 export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date();
 
-// The signed-in customer's orders. order-service only ever returns their own.
+// order-service only ever returns the signed-in customer's own orders
 @Component({
   selector: 'app-orders',
   imports: [CurrencyPipe, DatePipe, RouterLink],

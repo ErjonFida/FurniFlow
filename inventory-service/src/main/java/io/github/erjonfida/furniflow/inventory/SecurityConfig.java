@@ -7,7 +7,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
-// Requests carry a Keycloak access token; roles come from it (see spring.security in application.yml)
+// Roles come from the token (see spring.security in application.yml)
 @Configuration
 class SecurityConfig {
 
@@ -16,14 +16,14 @@ class SecurityConfig {
 		return http
 			.authorizeHttpRequests(requests -> requests
 				.requestMatchers(HttpMethod.GET, "/api/inventory/stock/*").permitAll() // the shop shows availability
-				.requestMatchers(HttpMethod.GET, "/api/inventory/stock").hasRole("admin") // every SKU at once
+				.requestMatchers(HttpMethod.GET, "/api/inventory/stock").hasRole("admin")
 				.requestMatchers("/actuator/health/**").permitAll() // Kubernetes probes; shows only UP or DOWN
 				.requestMatchers("/api/inventory/stock/*/restock").hasRole("admin")
 				// Only order-service may hold stock, so nobody can tie units up without placing an order
 				.requestMatchers("/api/inventory/reservations/**").hasRole("reserve-stock")
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(server -> server.jwt(Customizer.withDefaults()))
-			// CSRF abuses cookies the browser sends by itself. A bearer token is only sent when our code adds it.
+			// Bearer tokens only, no cookies, so there is nothing for CSRF to abuse
 			.csrf(csrf -> csrf.disable())
 			.build();
 	}

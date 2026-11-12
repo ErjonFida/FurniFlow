@@ -31,7 +31,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-// Runs against a real MongoDB in Docker (Testcontainers)
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -159,8 +158,7 @@ class CatalogIntegrationTests {
 		mvc.perform(get("/api/catalog/products/{sku}", sofa)).andExpect(status().isNotFound());
 	}
 
-	// Signed in with this Keycloak realm role. Its authorities come from the app's own converter (application.yml),
-	// so a broken role mapping fails these tests too. Only the token's signature isn't checked.
+	// Authorities come from the app's own converter (application.yml), so a broken role mapping fails these tests too
 	private RequestPostProcessor as(String role) {
 		return jwt().jwt(token -> token.claim("realm_access", Map.of("roles", List.of(role))))
 			.authorities(token -> tokens.convert(token).getAuthorities());

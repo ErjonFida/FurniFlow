@@ -1,10 +1,8 @@
-# Databases, Kafka and Keycloak for a local cluster. In the cloud these would be managed services.
 apiVersion: v1
 kind: Secret
 metadata: {name: furniflow}
 stringData:
-  # Local-only values, the same as in compose.yaml and keycloak/furniflow-realm.json.
-  # A real cluster gets this Secret from outside Git (kubectl create secret, or the cloud's secret store).
+  # Local-only values, as in compose.yaml and the realm file. A real cluster gets this Secret from outside Git.
   db-password: furniflow
   order-service-client-secret: order-service-secret
 ---
@@ -26,7 +24,6 @@ spec:
             - {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: furniflow, key: db-password}}}
           ports: [{containerPort: 5432}]
           volumeMounts: [{name: data, mountPath: /var/lib/postgresql}]
-  # Each database keeps its own disk, which survives pod restarts and redeploys
   volumeClaimTemplates:
     - metadata: {name: data}
       spec: {accessModes: [ReadWriteOnce], resources: {requests: {storage: 1Gi}}}

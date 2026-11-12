@@ -8,16 +8,13 @@ import org.springframework.data.jpa.repository.Query;
 
 interface ReservationRepository extends JpaRepository<Reservation, UUID> {
 
-	// Moves a reservation to {@code to} only if it is still {@code from}. Returns 1 if this call moved it, 0 if
-	// something else (a release, the expiry job, a repeated event) got there first.
+	// Returns 1 if this call moved it, 0 if a release, the expiry job or a repeated event got there first
 	@Modifying
 	@Query("UPDATE Reservation r SET r.status = :to WHERE r.id = :id AND r.status = :from")
 	int transition(UUID id, Reservation.Status from, Reservation.Status to);
 
-	/**
-	Expires overdue reservations and returns their units to stock, in one statement.
-	Safe to run on several instances at once: a row already expired by another run no longer matches status = 'ACTIVE'.
-	 */
+	// One statement expires overdue reservations and returns their units. Safe on several instances at once: a row
+	// another run already expired no longer matches status = 'ACTIVE'.
 	@Modifying
 	@Query(value = """
 			WITH expired AS (

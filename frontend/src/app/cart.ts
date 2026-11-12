@@ -41,8 +41,7 @@ export class Cart {
   }
 }
 
-// The cart and checkout. Names and prices come from the catalog. order-service only gets SKUs and quantities and
-// looks the prices up again itself, so the price an order keeps can't be made up in the browser.
+// order-service gets only SKUs and quantities and looks the prices up itself, so a price can't be made up here
 @Component({
   selector: 'app-cart-page',
   imports: [CurrencyPipe, RouterLink],
@@ -100,9 +99,8 @@ export class CartPage {
     this.lines().reduce((sum, line) => sum + (line.product?.price ?? 0) * line.quantity, 0),
   );
   protected readonly message = signal('');
-  // One key per cart. If the answer gets lost and the customer clicks again, the same key goes with it and
-  // order-service returns the order it already placed instead of reserving the units twice. A changed cart is another
-  // order, so it gets a new key: order-service refuses a key that comes back with other items.
+  // One key per cart: if the answer gets lost and the customer clicks again, order-service returns the order it
+  // already placed. A changed cart is another order, so it gets a new key: a reused key with other items is refused.
   private readonly idempotencyKey = computed(() => {
     this.cart.items();
     return crypto.randomUUID();

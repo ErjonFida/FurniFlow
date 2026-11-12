@@ -12,8 +12,6 @@ import { Product } from './products';
 export const parseAttributes = (text: string): Record<string, string> =>
   Object.fromEntries([...text.matchAll(/^(.+?):(.*)$/gm)].map(([, name, value]) => [name.trim(), value.trim()]));
 
-// Admins edit the catalog (catalog-service), add units to a SKU (inventory-service), see every order
-// (order-service) and manage users (Keycloak)
 @Component({
   selector: 'app-admin',
   imports: [CurrencyPipe, DatePipe, FormsModule, RouterLink],
@@ -149,7 +147,6 @@ export class Admin {
   protected readonly stock = httpResource<{ sku: string; available: number }[]>(() => '/api/inventory/stock');
   protected readonly orders = httpResource<Order[]>(() => '/api/orders/all');
   protected readonly isHeld = isHeld;
-  // Units on sale per SKU. A product that was never restocked has none.
   protected readonly available = computed(
     () => new Map(this.stock.hasValue() ? this.stock.value().map((s) => [s.sku, s.available] as const) : []),
   );

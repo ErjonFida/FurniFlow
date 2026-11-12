@@ -11,7 +11,7 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: validate 
+      ddl-auto: validate
   mvc:
     problemdetails:
       enabled: true
@@ -28,7 +28,6 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # Tokens must be signed by this realm. Its public keys are fetched from here on the first request.
           issuer-uri: http://localhost:8180/realms/furniflow
           # Keycloak lists realm roles under realm_access.roles; admin becomes ROLE_admin, for hasRole("admin")
           authorities-claim-expressions: "['realm_access']['roles']"

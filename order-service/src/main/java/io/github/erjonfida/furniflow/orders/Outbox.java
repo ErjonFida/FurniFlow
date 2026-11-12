@@ -12,11 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Transactional outbox. An event is saved in the same database transaction as the change it describes, and a
- * scheduled job sends it to Kafka afterwards. Writing to the database and to Kafka directly can't be atomic: a crash
- * between the two would lose the event, or send one for a change that rolled back.
- */
+// Transactional outbox: an event is saved in the same transaction as the change it describes, then sent to Kafka.
+// Writing to both directly can't be atomic: a crash in between loses the event or announces a change that rolled back.
 @Component
 class Outbox {
 
@@ -42,11 +39,8 @@ class Outbox {
 				json.writeValueAsString(event));
 	}
 
-	/**
-	 * Deletes the oldest rows and sends them, in one transaction: if a send fails, the delete rolls back and the rows
-	 * go out on the next run. A crash after sending but before the commit sends them twice, so delivery is at least
-	 * once and consumers must tolerate repeats. SKIP LOCKED lets several instances run this without sharing rows.
-	 */
+	// Delete and send in one transaction: a failed send rolls the delete back, and a crash before the commit sends
+	// twice, so delivery is at least once. SKIP LOCKED lets several instances run this without sharing rows.
 	@Scheduled(fixedDelay = 500)
 	@Transactional
 	public void publish() {
@@ -61,7 +55,7 @@ class Outbox {
 				row.getString("payload")));
 		for (Message message : batch) {
 			// join() rather than get(): its exception is unchecked, and only unchecked exceptions roll back
-			// ponytail: one send at a time (a few hundred events/s); send the batch and join them all if orders outgrow that
+			// One send at a time (a few hundred events/s); send the batch and join them all if orders outgrow that
 			kafka.send(message.topic(), message.key(), message.payload()).join();
 		}
 	}

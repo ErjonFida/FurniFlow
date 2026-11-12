@@ -33,8 +33,7 @@ import org.springframework.web.client.ResourceAccessException;
 @RequestMapping("/api/orders")
 class OrderController {
 
-	// The cart. Each line costs a call to the catalog and one to inventory, hence the cap. No names or prices:
-	// order-service looks them up itself.
+	// Each line costs a call to the catalog and one to inventory, hence the cap
 	record PlaceOrderRequest(@NotEmpty @Size(max = 50) List<@NotNull @Valid Item> items) {
 	}
 
@@ -60,8 +59,7 @@ class OrderController {
 		this.orders = orders;
 	}
 
-	// The client makes up a key per order (a UUID) and sends the same one on every retry.
-	// customer.getName() is the token's subject: the customer's Keycloak user ID.
+	// customer.getName() is the token's subject: the customer's Keycloak user ID
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	OrderView place(@RequestHeader("Idempotency-Key") @NotBlank @Size(max = 64) String idempotencyKey,
@@ -70,14 +68,13 @@ class OrderController {
 		return OrderView.of(orders.place(customer.getName(), username, idempotencyKey, request.items()));
 	}
 
-	// ponytail: no paging, fine for a customer's own orders
+	// No paging, fine for a customer's own orders
 	@GetMapping
 	List<OrderView> list(Principal customer) {
 		return orders.list(customer.getName()).stream().map(OrderView::of).toList();
 	}
 
-	// Every customer's orders, for admins (see SecurityConfig).
-	// ponytail: no paging; add it when the shop has more than a few hundred orders
+	// For admins (see SecurityConfig). No paging; add it when the shop has more than a few hundred orders
 	@GetMapping("/all")
 	List<OrderView> all() {
 		return orders.all().stream().map(OrderView::of).toList();
@@ -94,7 +91,6 @@ class OrderController {
 		return OrderView.of(orders.pay(id, customer.getName()));
 	}
 
-	// Unpaid orders only. The order stays, marked CANCELLED, and its units go back on sale.
 	@PostMapping("/{id}/cancel")
 	OrderView cancel(@PathVariable UUID id, Principal customer) {
 		return OrderView.of(orders.cancel(id, customer.getName()));

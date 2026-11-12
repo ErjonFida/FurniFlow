@@ -1,10 +1,6 @@
-# FurniFlow's own services. Settings that differ from application.yml come in as environment variables.
-#
-# Tokens name http://localhost:8180 as their issuer (KC_HOSTNAME in infra.yaml), which the services check as before.
-# Only the signing keys are fetched in-cluster, from keycloak:8180, since localhost inside a pod is the pod itself.
-#
-# Memory: limit = request, so a pod never gets killed for memory it was promised. No CPU limit: it would throttle
-# the JVM's startup, and the CPU request already decides the share under load.
+# Tokens name http://localhost:8180 as their issuer (KC_HOSTNAME in infra.yaml); only the signing keys are fetched
+# in-cluster, since localhost inside a pod is the pod itself. Memory limit = request, so a pod is never killed for
+# memory it was promised. No CPU limit: it would throttle the JVM's startup.
 apiVersion: apps/v1
 kind: Deployment
 metadata: {name: gateway}

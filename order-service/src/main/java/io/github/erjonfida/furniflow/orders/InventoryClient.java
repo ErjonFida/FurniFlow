@@ -20,7 +20,7 @@ import org.springframework.web.client.RestClient;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
-/** Calls inventory-service. Timeouts are under spring.http.clients in application.yml. */
+// Timeouts are under spring.http.clients in application.yml
 @Component
 class InventoryClient {
 
