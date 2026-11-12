@@ -28,10 +28,12 @@ describe('ProductPage', () => {
   });
 
   // Answers the product; the stock call is left to the test
-  const open = async (sku: string) => {
+  const open = async (sku: string, error?: { status: number; statusText: string }) => {
     await harness.navigateByUrl(`/products/${sku}`);
     TestBed.tick(); // the page asks for the product once its sku is set
-    server.expectOne(`/api/catalog/products/${sku}`).flush({ sku, name: sku, category: 'Sofas', price: 1, attributes: {} });
+    server
+      .expectOne(`/api/catalog/products/${sku}`)
+      .flush(error ? null : { sku, name: sku, category: 'Sofas', price: 1, attributes: {} }, error);
     // Not whenStable: that waits for the stock call too. The resource takes its value in a promise, so let those run first.
     await new Promise((resolve) => setTimeout(resolve));
     TestBed.tick();
@@ -83,6 +85,15 @@ describe('ProductPage', () => {
     await stock('CHAIR-1', { available: 0 });
     expect(text()).toContain('Out of stock');
     expect(quantity()).toBeNull();
+  });
+
+  it("says a product doesn't exist only when the catalog says so", async () => {
+    await open('GONE-1', { status: 404, statusText: 'Not Found' });
+    expect(text()).toContain("doesn't exist");
+
+    await open('SOFA-1', { status: 503, statusText: 'Service Unavailable' });
+    expect(text()).not.toContain("doesn't exist");
+    expect(text()).toContain("couldn't be loaded");
   });
 
   it('calls a product inventory never stocked out of stock, but not one inventory just failed to answer for', async () => {
