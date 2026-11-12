@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 // The overselling experiment: BUYERS buyers hit one SKU with STOCK units at the same moment, each taking one unit.
 // Not part of ./mvnw verify (Surefire only runs *Test and *Tests classes). Run it with:
 //   ./mvnw -pl inventory-service test -Dtest=ReservationBenchmark
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class ReservationBenchmark {
 
