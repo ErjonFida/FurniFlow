@@ -27,6 +27,8 @@ describe('checkSignIn', () => {
 });
 
 describe('auth', () => {
+  beforeEach(() => checkSignIn({ init: () => Promise.resolve(false) } as unknown as Keycloak)); // Keycloak has answered
+
   function setUp(keycloak: Partial<Keycloak>) {
     TestBed.configureTestingModule({
       providers: [
@@ -106,12 +108,29 @@ describe('auth', () => {
     expect(login).toHaveBeenCalledWith({ redirectUri: `${location.origin}/admin` });
   });
 
-  it('lets admins in and sends everyone else home', () => {
+  it('lets admins in and sends everyone else home', async () => {
     setUp(signedIn(['admin']));
-    expect(guard('admin')).toBe(true);
+    expect(await guard('admin')).toBe(true);
 
     TestBed.resetTestingModule();
     setUp(signedIn(['customer']));
-    expect((guard('admin') as UrlTree).toString()).toBe('/');
+    expect(((await guard('admin')) as UrlTree).toString()).toBe('/');
+  });
+
+  it('waits for a sign-in that is still completing, instead of sending the user to Keycloak again', async () => {
+    let finish!: () => void;
+    const keycloak: Partial<Keycloak> = { authenticated: false, login: vi.fn(() => Promise.resolve()), hasRealmRole: () => true };
+    keycloak.init = () =>
+      new Promise((resolve) => {
+        finish = () => resolve((keycloak.authenticated = true));
+      });
+    setUp(keycloak);
+    await checkSignIn(keycloak as Keycloak, 1); // the shop renders before Keycloak has finished
+
+    const allowed = guard('admin');
+    finish();
+
+    expect(await allowed).toBe(true);
+    expect(keycloak.login).not.toHaveBeenCalled();
   });
 });
