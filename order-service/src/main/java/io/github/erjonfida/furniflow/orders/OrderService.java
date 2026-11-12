@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -26,6 +27,9 @@ public class OrderService {
 	private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
 	static final String ORDER_PAID = "order-paid";
+
+	// Anyone can register, so this keeps one account from holding the shop's stock in orders it never pays
+	static final int MAX_UNPAID_UNITS = 10;
 
 	record OrderPaid(UUID orderId, List<UUID> reservationIds) {
 	}
@@ -43,13 +47,16 @@ public class OrderService {
 
 	private final TransactionTemplate transactions;
 
+	private final JdbcTemplate jdbc;
+
 	OrderService(OrderRepository orders, CatalogClient catalog, InventoryClient inventory, Outbox outbox,
-			TransactionTemplate transactions) {
+			TransactionTemplate transactions, JdbcTemplate jdbc) {
 		this.orders = orders;
 		this.catalog = catalog;
 		this.inventory = inventory;
 		this.outbox = outbox;
 		this.transactions = transactions;
+		this.jdbc = jdbc;
 	}
 
 	// Another customer's order is reported as unknown, so nobody can find out which order IDs exist
@@ -96,14 +103,35 @@ public class OrderService {
 			release(lines);
 			throw failed;
 		}
+		Order order = new Order(customerId, customerName, idempotencyKey, lines, reservedUntil);
 		try {
-			return orders.saveAndFlush(new Order(customerId, customerName, idempotencyKey, lines, reservedUntil));
+			return transactions.execute(tx -> saveWithinCap(customerId, order));
 		}
 		catch (DataIntegrityViolationException sameKey) {
 			// A concurrent retry with the same key saved its order first ((customer_id, idempotency_key) is UNIQUE)
 			release(lines);
 			return sameItems(orders.findByCustomerIdAndIdempotencyKey(customerId, idempotencyKey).orElseThrow(), items);
 		}
+		catch (ResponseStatusException overCap) {
+			release(lines);
+			throw overCap;
+		}
+	}
+
+	// Saved before counting, so a retry of an order already held fails on the UNIQUE key and gets its order back
+	private Order saveWithinCap(String customerId, Order order) {
+		// One customer's orders are saved one at a time, so parallel requests can't all slip under the cap
+		jdbc.query("SELECT pg_advisory_xact_lock(hashtext(?))", rs -> null, customerId);
+		orders.saveAndFlush(order);
+		int held = jdbc.queryForObject("""
+				SELECT coalesce(sum(quantity), 0) FROM order_line JOIN orders ON orders.id = order_id
+				WHERE customer_id = ? AND status = 'RESERVED' AND reserved_until > now()""", Integer.class,
+				customerId);
+		if (held > MAX_UNPAID_UNITS) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "You can hold at most " + MAX_UNPAID_UNITS
+					+ " units in unpaid orders. Pay for or cancel an order first.");
+		}
+		return order;
 	}
 
 	// Other items under a used key are another order: refuse it (422, as the IETF Idempotency-Key draft suggests)

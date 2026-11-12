@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.StreamSupport;
@@ -35,6 +37,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.server.ResponseStatusException;
 
 import io.github.erjonfida.furniflow.orders.OrderService.Item;
 
@@ -206,6 +209,34 @@ class OrderIntegrationTests {
 		assertThat(answers).hasSize(1);
 		// Every request that lost the race gave its units back, so exactly one hold is left
 		assertThat(calls("reserve") - calls("release")).isOne();
+	}
+
+	@Test
+	void customersHoldOnlySoManyUnpaidUnitsEvenInParallel() throws Exception {
+		when(inventory.reserve(any(), anyInt())).thenAnswer(call -> hold(Duration.ofMinutes(15)));
+		Map<String, Future<Order>> attempts = new HashMap<>();
+
+		try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+			for (int i = 0; i < 20; i++) {
+				String attemptKey = key + "-" + i;
+				attempts.put(attemptKey, pool.submit(() -> orders.place("dave", "dave", attemptKey, List.of(new Item("SOFA-1", 1)))));
+			}
+		}
+		List<String> placed = new ArrayList<>();
+		for (var attempt : attempts.entrySet()) {
+			try {
+				attempt.getValue().get();
+				placed.add(attempt.getKey());
+			}
+			catch (ExecutionException refused) {
+				assertThat(refused.getCause()).isInstanceOf(ResponseStatusException.class).hasMessageContaining("unpaid");
+			}
+		}
+
+		assertThat(placed).hasSize(OrderService.MAX_UNPAID_UNITS);
+		assertThat(calls("reserve") - calls("release")).isEqualTo(OrderService.MAX_UNPAID_UNITS); // refused ones gave back
+		// A retry of an order that's already held still gets it back, although the customer is at the cap
+		mvc.perform(place("dave", placed.getFirst(), "SOFA-1", 1)).andExpect(status().isCreated());
 	}
 
 	@Test

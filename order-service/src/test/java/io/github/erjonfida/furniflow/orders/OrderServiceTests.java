@@ -14,6 +14,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.client.ResourceAccessException;
 
@@ -43,6 +46,12 @@ class OrderServiceTests {
 	@Mock
 	Outbox outbox;
 
+	@Mock
+	TransactionTemplate transactions;
+
+	@Mock
+	JdbcTemplate jdbc;
+
 	@InjectMocks
 	OrderService service;
 
@@ -55,6 +64,7 @@ class OrderServiceTests {
 		when(orders.findByCustomerIdAndIdempotencyKey("alice", "key-1"))
 			.thenReturn(Optional.empty(), Optional.of(winner));
 		when(inventory.reserve("SOFA-1", 1)).thenReturn(new InventoryClient.Reservation(ours, Instant.now()));
+		when(transactions.execute(any())).thenAnswer(call -> call.<TransactionCallback<?>>getArgument(0).doInTransaction(null));
 		when(orders.saveAndFlush(any())).thenThrow(DataIntegrityViolationException.class);
 		// The order exists, so the customer gets it even if inventory can't take the units back right now
 		doThrow(new ResourceAccessException("inventory is down")).when(inventory).release(ours);
