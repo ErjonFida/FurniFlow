@@ -46,6 +46,8 @@ export const parseAttributes = (text: string): Record<string, string> =>
               }
             </tbody>
           </table>
+        } @else if (products.error()) {
+          <p role="alert">Products can't be loaded right now.</p>
         }
       </section>
 
@@ -137,6 +139,8 @@ export const parseAttributes = (text: string): Record<string, string> =>
             }
           </tbody>
         </table>
+      } @else if (orders.error()) {
+        <p role="alert">Orders can't be loaded right now.</p>
       }
     </section>
   `,
