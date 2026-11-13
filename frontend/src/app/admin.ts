@@ -34,7 +34,8 @@ export const parseAttributes = (text: string): Record<string, string> =>
                   <td>{{ p.sku }}</td>
                   <td>{{ p.name }}</td>
                   <td class="text-end">{{ p.price | currency: 'EUR' }}</td>
-                  <td class="text-end">{{ available().get(p.sku) ?? 0 }}</td>
+                  <!-- Unknown until inventory answers. A SKU it doesn't list was never stocked. -->
+                  <td class="text-end">{{ stock.hasValue() ? (available().get(p.sku) ?? 0) : '?' }}</td>
                   <td class="text-end text-nowrap">
                     <button class="btn btn-link btn-sm" type="button" (click)="edit(p)">Edit</button>
                     <button class="btn btn-link btn-sm text-danger" type="button" (click)="remove(p)">Delete</button>
@@ -45,6 +46,8 @@ export const parseAttributes = (text: string): Record<string, string> =>
               }
             </tbody>
           </table>
+        } @else if (products.error()) {
+          <p role="alert">Products can't be loaded right now.</p>
         }
       </section>
 
@@ -136,6 +139,8 @@ export const parseAttributes = (text: string): Record<string, string> =>
             }
           </tbody>
         </table>
+      } @else if (orders.error()) {
+        <p role="alert">Orders can't be loaded right now.</p>
       }
     </section>
   `,

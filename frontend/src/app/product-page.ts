@@ -61,7 +61,9 @@ import { Product } from './products';
         </div>
       </div>
     } @else if (product.error()) {
-      <p role="alert">This product doesn't exist.</p>
+      <p role="alert">
+        {{ product.statusCode() === 404 ? "This product doesn't exist." : "This product couldn't be loaded. Try again in a moment." }}
+      </p>
     }
   `,
 })

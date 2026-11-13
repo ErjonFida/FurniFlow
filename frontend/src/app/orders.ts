@@ -9,7 +9,7 @@ export interface Order {
   // Orders from before names and prices were kept have none (null)
   items: { sku: string; name: string | null; quantity: number; unitPrice: number | null }[];
   total: number | null;
-  status: 'RESERVED' | 'PAID' | 'CANCELLED';
+  status: 'RESERVED' | 'PAID' | 'CANCELLED' | 'EXPIRED';
   reservedUntil: string;
 }
 
@@ -57,6 +57,8 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
           }
         </tbody>
       </table>
+    } @else if (orders.error()) {
+      <p role="alert">Your orders can't be loaded right now.</p>
     }
     @if (message()) {
       <p class="text-danger" role="alert">{{ message() }}</p>
