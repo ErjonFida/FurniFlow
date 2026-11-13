@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: gateway
+  http:
+    clients:
+      # A service that stops answering must not hold the gateway's threads, and with them the rest of the shop
+      connect-timeout: 2s
+      read-timeout: 30s
   cloud:
     gateway:
       server:
