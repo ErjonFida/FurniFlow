@@ -1,9 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import Keycloak from 'keycloak-js';
 import { App } from './app';
+import { routes } from './app.routes';
 import { Cart } from './cart';
 
 describe('App', () => {
@@ -126,5 +128,15 @@ describe('App', () => {
 
     expect(page.querySelector('.menu-room h2')?.textContent).toBe('Tables');
     expect([...page.querySelectorAll('.menu-room li a')].map((a) => a.getAttribute('href'))).toEqual(['/products/A', '/products/C']);
+  });
+});
+
+describe('routes', () => {
+  it('send a mistyped address home instead of showing an empty page', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting(), { provide: Keycloak, useValue: { authenticated: false } }],
+    });
+    await RouterTestingHarness.create('/prodcts');
+    expect(TestBed.inject(Router).url).toBe('/');
   });
 });

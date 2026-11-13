@@ -10,4 +10,5 @@ export const routes: Routes = [
   { path: 'cart', loadComponent: () => import('./cart').then((m) => m.CartPage) },
   { path: 'orders', loadComponent: () => import('./orders').then((m) => m.Orders), canActivate: [hasRole('customer')] },
   { path: 'admin', loadComponent: () => import('./admin').then((m) => m.Admin), canActivate: [hasRole('admin')] },
+  { path: '**', redirectTo: '' }, // nginx answers every path with the app, so a mistyped one ends up here
 ];
