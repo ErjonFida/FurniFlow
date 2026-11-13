@@ -25,6 +25,7 @@ services:
   kafka:
     image: apache/kafka:4.2.2
     ports: ["9092:9092"]
+    volumes: [kafka-data:/tmp] # the image's default setup keeps its data in /tmp/kraft-combined-logs
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.1
@@ -39,3 +40,4 @@ volumes:
   inventory-data:
   order-data:
   catalog-data:
+  kafka-data:
