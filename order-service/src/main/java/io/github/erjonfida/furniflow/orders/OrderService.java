@@ -150,10 +150,10 @@ public class OrderService {
 			return order; // payment providers retry their callbacks
 		}
 		if (order.getStatus() == Order.Status.CANCELLED) {
-			throw new IllegalStateException("This order was cancelled. Place it again.");
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "This order was cancelled. Place it again.");
 		}
 		if (order.getReservedUntil().isBefore(Instant.now())) {
-			throw new IllegalStateException("The hold on this order ran out. Place it again.");
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "The hold on this order ran out. Place it again.");
 		}
 		order.markPaid();
 		// Same transaction as the status change: the event exists if and only if the payment was recorded
@@ -168,7 +168,7 @@ public class OrderService {
 			Order locked = lock(id, customerId);
 			if (locked.getStatus() == Order.Status.PAID) {
 				// No refunds; add them together with a real payment provider
-				throw new IllegalStateException("This order is paid and can't be cancelled.");
+				throw new ResponseStatusException(HttpStatus.CONFLICT, "This order is paid and can't be cancelled.");
 			}
 			locked.markCancelled();
 			return locked;
