@@ -9,7 +9,7 @@ export interface Order {
   // Orders from before names and prices were kept have none (null)
   items: { sku: string; name: string | null; quantity: number; unitPrice: number | null }[];
   total: number | null;
-  status: 'RESERVED' | 'PAID' | 'CANCELLED';
+  status: 'RESERVED' | 'PAID' | 'CANCELLED' | 'EXPIRED';
   reservedUntil: string;
 }
 

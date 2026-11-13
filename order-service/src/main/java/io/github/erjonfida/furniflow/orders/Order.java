@@ -27,7 +27,8 @@ import org.hibernate.annotations.FetchMode;
 @Table(name = "orders")
 public class Order {
 
-	public enum Status { RESERVED, PAID, CANCELLED }
+	// EXPIRED is never stored: it's a RESERVED order whose hold ran out (see getStatus)
+	public enum Status { RESERVED, PAID, CANCELLED, EXPIRED }
 
 	// A product in the order, with the catalog's name and price as they were when it was placed
 	@Embeddable
@@ -108,7 +109,7 @@ public class Order {
 	}
 
 	public Status getStatus() {
-		return status;
+		return status == Status.RESERVED && reservedUntil.isBefore(Instant.now()) ? Status.EXPIRED : status;
 	}
 
 	public Instant getReservedUntil() {

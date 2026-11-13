@@ -254,7 +254,9 @@ class OrderIntegrationTests {
 
 		// The refused attempt left no order behind, so the same key can be used again
 		when(inventory.reserve("SOFA-1", 1)).thenReturn(hold(Duration.ofSeconds(-1)));
-		String late = mvc.perform(place("alice", key, "SOFA-1", 1)).andReturn().getResponse().getContentAsString();
+		String late = mvc.perform(place("alice", key, "SOFA-1", 1))
+			.andExpect(jsonPath("$.status").value("EXPIRED")) // not RESERVED forever
+			.andReturn().getResponse().getContentAsString();
 		mvc.perform(post("/api/orders/{id}/pay", JsonPath.<String>read(late, "$.id")).with(as("alice", "customer")))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.detail").value(containsString("hold on this order ran out")));
