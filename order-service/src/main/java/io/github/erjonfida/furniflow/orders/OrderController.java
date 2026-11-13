@@ -101,11 +101,6 @@ class OrderController {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
 	}
 
-	@ExceptionHandler
-	ProblemDetail wrongStatus(IllegalStateException e) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
-	}
-
 	// Timed out or couldn't connect. Retrying with the same Idempotency-Key is safe.
 	@ExceptionHandler
 	ProblemDetail inventoryUnavailable(ResourceAccessException e) {
