@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -53,8 +54,9 @@ class ProductController {
 		return products.findById(sku).orElseThrow(() -> new NoSuchElementException("Unknown product " + sku));
 	}
 
+	// 64: inventory and orders keep SKUs in varchar(64), so a longer one could never be stocked or sold
 	@PutMapping("/{sku}")
-	Product save(@PathVariable String sku, @Valid @RequestBody ProductRequest request) {
+	Product save(@PathVariable @Size(max = 64) String sku, @Valid @RequestBody ProductRequest request) {
 		return products.save(new Product(sku, request.name(), request.category(), request.price(),
 				request.description(), Objects.requireNonNullElse(request.attributes(), Map.of()), request.imageUrl()));
 	}

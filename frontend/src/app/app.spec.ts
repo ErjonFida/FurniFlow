@@ -139,4 +139,25 @@ describe('routes', () => {
     await RouterTestingHarness.create('/prodcts');
     expect(TestBed.inject(Router).url).toBe('/');
   });
+
+  it('share one catalog request with the header, and only the cart asks again, for the prices an order would get', async () => {
+    TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting(), { provide: Keycloak, useValue: { authenticated: false } }],
+    });
+    const fixture = TestBed.createComponent(App);
+    const server = TestBed.inject(HttpTestingController);
+    const catalogRequestsOn = async (url: string) => {
+      await TestBed.inject(Router).navigateByUrl(url);
+      fixture.detectChanges();
+      const requests = server.match('/api/catalog/products');
+      requests.forEach((request) => request.flush([]));
+      await fixture.whenStable();
+      return requests.length;
+    };
+
+    expect(await catalogRequestsOn('/')).toBe(1); // the header's menu and the home page
+    expect(await catalogRequestsOn('/products')).toBe(0);
+    expect(await catalogRequestsOn('/cart')).toBe(1);
+  });
 });

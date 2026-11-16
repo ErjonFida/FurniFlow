@@ -13,8 +13,6 @@ export interface Order {
   reservedUntil: string;
 }
 
-export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date();
-
 // order-service only ever returns the signed-in customer's own orders
 @Component({
   selector: 'app-orders',
@@ -41,7 +39,7 @@ export const isHeld = (order: Order) => new Date(order.reservedUntil) > new Date
               } @else if (order.status === 'CANCELLED') {
                 <td>Cancelled</td>
                 <td></td>
-              } @else if (isHeld(order)) {
+              } @else if (order.status === 'RESERVED') {
                 <td>Reserved until {{ order.reservedUntil | date: 'shortTime' }}</td>
                 <td class="text-nowrap">
                   <button class="btn btn-primary btn-sm" type="button" (click)="send(order, 'pay')">Pay</button>
@@ -69,11 +67,13 @@ export class Orders {
   private readonly http = inject(HttpClient);
   protected readonly orders = httpResource<Order[]>(() => '/api/orders');
   protected readonly message = signal('');
-  protected readonly isHeld = isHeld;
 
   send(order: Order, action: 'pay' | 'cancel') {
     this.http.post(`/api/orders/${order.id}/${action}`, null).subscribe({
-      next: () => this.orders.reload(),
+      next: () => {
+        this.message.set(''); // an earlier failure is over
+        this.orders.reload();
+      },
       error: (e: HttpErrorResponse) => this.message.set(e.error?.detail ?? e.message),
     });
   }

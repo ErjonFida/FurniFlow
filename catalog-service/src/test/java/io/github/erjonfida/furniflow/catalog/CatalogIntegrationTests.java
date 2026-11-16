@@ -79,6 +79,10 @@ class CatalogIntegrationTests {
 		mvc.perform(get("/api/catalog/products/{sku}", sofa))
 			.andExpect(jsonPath("$.price").value(999.00))
 			.andExpect(jsonPath("$.attributes").isEmpty());
+
+		// Inventory and orders have room for 64 characters
+		mvc.perform(save(sofa + "-" + "X".repeat(30), "Oslo sofa", "999.00", null).with(as("admin")))
+			.andExpect(status().isBadRequest());
 	}
 
 	@Test
