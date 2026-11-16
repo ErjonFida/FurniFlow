@@ -5,8 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import Keycloak from 'keycloak-js';
 import { switchMap } from 'rxjs';
-import { isHeld, Order } from './orders';
-import { catalogResource, Product } from './products';
+import { Order } from './orders';
+import { Catalog, Product } from './products';
 
 // One "seats: 3" per line becomes { seats: '3' }
 export const parseAttributes = (text: string): Record<string, string> =>
@@ -56,7 +56,7 @@ export const parseAttributes = (text: string): Record<string, string> =>
         <form class="vstack gap-2" ngNativeValidate (ngSubmit)="save()">
           <div>
             <label class="form-label" for="product-sku">SKU</label>
-            <input class="form-control" id="product-sku" name="product-sku" [(ngModel)]="product.sku" required />
+            <input class="form-control" id="product-sku" name="product-sku" [(ngModel)]="product.sku" required maxlength="64" />
           </div>
           <div>
             <label class="form-label" for="name">Name</label>
@@ -128,7 +128,7 @@ export const parseAttributes = (text: string): Record<string, string> =>
                   <td>Paid</td>
                 } @else if (order.status === 'CANCELLED') {
                   <td>Cancelled</td>
-                } @else if (isHeld(order)) {
+                } @else if (order.status === 'RESERVED') {
                   <td>Reserved until {{ order.reservedUntil | date: 'short' }}</td>
                 } @else {
                   <td>Hold expired</td>
@@ -148,10 +148,10 @@ export const parseAttributes = (text: string): Record<string, string> =>
 export class Admin {
   private readonly http = inject(HttpClient);
   private readonly keycloak = inject(Keycloak);
-  protected readonly products = catalogResource();
+  // Shared with the header's menu, so a product saved here shows there too
+  protected readonly products = inject(Catalog).products;
   protected readonly stock = httpResource<{ sku: string; available: number }[]>(() => '/api/inventory/stock');
   protected readonly orders = httpResource<Order[]>(() => '/api/orders/all');
-  protected readonly isHeld = isHeld;
   protected readonly available = computed(
     () => new Map(this.stock.hasValue() ? this.stock.value().map((s) => [s.sku, s.available] as const) : []),
   );
@@ -163,6 +163,10 @@ export class Admin {
   quantity = 1;
   readonly message = signal('');
   private readonly fail = (e: HttpErrorResponse) => this.message.set(e.error?.detail ?? e.message);
+
+  constructor() {
+    this.products.reload(); // loaded when the shop was opened; another admin may have changed it since
+  }
 
   edit(p: Product) {
     this.product = {

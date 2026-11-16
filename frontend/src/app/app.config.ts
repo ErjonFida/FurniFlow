@@ -14,8 +14,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withComponentInputBinding(), // :sku in the URL becomes the page's sku input
-      // A new page starts at the top. Back returns to the old position only if the page is that long by then, so the
-      // shop, whose products arrive a moment later, starts at the top again.
+      // A new page starts at the top. Back returns to the old position only if the page is that long by then.
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
     ),
     provideHttpClient(withInterceptors([bearerToken])),

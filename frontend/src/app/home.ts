@@ -1,6 +1,6 @@
-import { Component, computed } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { catalogResource, ProductCard, roomsOf, srcsetOf } from './products';
+import { Catalog, ProductCard, roomsOf, srcsetOf } from './products';
 
 @Component({
   selector: 'app-home',
@@ -50,7 +50,7 @@ import { catalogResource, ProductCard, roomsOf, srcsetOf } from './products';
   `,
 })
 export class Home {
-  protected readonly products = catalogResource();
+  protected readonly products = inject(Catalog).products;
   protected readonly rooms = computed(() => roomsOf(this.products.hasValue() ? this.products.value() : []));
   protected readonly srcsetOf = srcsetOf;
 }

@@ -5,7 +5,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import Keycloak from 'keycloak-js';
 import { filter } from 'rxjs';
 import { Cart } from './cart';
-import { catalogResource, Room, roomsOf, srcsetOf } from './products';
+import { Catalog, Room, roomsOf, srcsetOf } from './products';
 
 @Component({
   imports: [CurrencyPipe, RouterLink, RouterOutlet],
@@ -19,9 +19,8 @@ export class App {
   protected readonly keycloak = inject(Keycloak);
   protected readonly cart = inject(Cart);
 
-  // loads the whole catalog for the menu, and a product an admin just added shows after a reload; ask
-  // catalog-service for just the menu's fields once it pages
-  private readonly products = catalogResource();
+  // the whole catalog, for the menu; ask catalog-service for just the menu's fields once it pages
+  private readonly products = inject(Catalog).products;
   protected readonly rooms = computed(() => roomsOf(this.products.hasValue() ? this.products.value() : []));
   protected readonly activeRoom = signal<Room | null>(null); // the one the menu's right side shows
   protected readonly srcsetOf = srcsetOf;

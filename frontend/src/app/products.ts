@@ -1,6 +1,6 @@
 import { CurrencyPipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, Injectable, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 export interface Product {
@@ -13,7 +13,11 @@ export interface Product {
   imageUrl?: string | null;
 }
 
-export const catalogResource = () => httpResource<Product[]>(() => '/api/catalog/products');
+// One request for the whole app: the header's menu, the shop and the cart show the same catalog
+@Injectable({ providedIn: 'root' })
+export class Catalog {
+  readonly products = httpResource<Product[]>(() => '/api/catalog/products');
+}
 
 // Unsplash resizes on request (?w=), so small places offer the browser smaller copies of the 1000px photos, and
 // sizes="auto" lets it take the one that fits. Any other address (an admin can paste one) is used as it is.
@@ -113,7 +117,7 @@ export class Products {
   readonly q = input<string>();
 
   // filters in the browser, fine while the catalog comes in one response; query MongoDB once it pages
-  protected readonly products = catalogResource();
+  protected readonly products = inject(Catalog).products;
   protected readonly all = computed(() => (this.products.hasValue() ? this.products.value() : []));
   protected readonly categories = computed(() => categoriesOf(this.all()));
   protected readonly matches = computed(() => matching(this.all(), this.category(), this.q()));
