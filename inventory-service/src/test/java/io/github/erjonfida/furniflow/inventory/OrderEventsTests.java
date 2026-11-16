@@ -13,8 +13,10 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.CannotCreateTransactionException;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -28,6 +30,9 @@ class OrderEventsTests {
 
 	@Autowired
 	KafkaTemplate<String, String> kafka;
+
+	@Autowired
+	OrderEvents events;
 
 	@Test
 	void anEventThatArrivesWhileTheDatabaseIsAwayIsConfirmedOnceItIsBack() {
@@ -57,6 +62,18 @@ class OrderEventsTests {
 		kafka.send("order-paid", "key", paid(id)).join();
 
 		awaitConfirmed(id);
+	}
+
+	@Test
+	void aLineSoldMeanwhileDoesntHideAFailureOfAnotherLineThatARetryWouldFix() {
+		UUID away = UUID.randomUUID();
+		UUID soldOut = UUID.randomUUID();
+		doThrow(new CannotCreateTransactionException("the database is away")).when(inventory).confirm(away);
+		doThrow(new InsufficientStockException("SOFA-1", 1)).when(inventory).confirm(soldOut);
+
+		// What the listener throws decides between retrying the event and skipping it
+		assertThatThrownBy(() -> events.onOrderPaid("{\"reservationIds\": [\"%s\", \"%s\"]}".formatted(away, soldOut)))
+			.isInstanceOf(CannotCreateTransactionException.class);
 	}
 
 	private UUID reserve() {
